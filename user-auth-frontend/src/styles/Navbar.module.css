@@ -1,0 +1,58 @@
+.navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 2rem;
+  background-color: #f3f4f6;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  font-family: sans-serif;
+}
+
+.logo {
+  font-weight: bold;
+  font-size: 1.25rem;
+  cursor: pointer;
+}
+
+.navRight {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.username {
+  color: #4b5563;
+  font-size: 0.95rem;
+}
+
+.link {
+  text-decoration: none;
+  color: #6366f1;
+  font-weight: 500;
+  padding: 0.4rem 0.8rem;
+  border-radius: 6px;
+  transition: background-color 0.2s ease;
+}
+
+.link:hover {
+  background-color: #e0e7ff;
+}
+
+.active {
+  background-color: #6366f1;
+  color: white;
+}
+
+.logoutButton {
+  background-color: #e5e7eb;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  color: #333;
+}
+
+.logoutButton:hover {
+  background-color: #d1d5db;
+}

@@ -1,0 +1,81 @@
+.page {
+  display: flex;
+  min-height: 100vh;
+  background: #f5f7fb;
+}
+
+.sidebar {
+  width: 240px;
+  background: #0f172a;
+  color: #e2e8f0;
+  padding: 1.5rem 1rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.brand {
+  font-size: 1.2rem;
+  font-weight: 700;
+  margin-bottom: 1.6rem;
+}
+
+.userBlock {
+  background: #1e293b;
+  border-radius: 10px;
+  padding: 0.8rem;
+  margin-bottom: 1.2rem;
+}
+
+.userName {
+  font-weight: 600;
+  color: #f8fafc;
+}
+
+.userEmail {
+  font-size: 0.8rem;
+  color: #94a3b8;
+  margin-top: 0.2rem;
+  overflow-wrap: anywhere;
+}
+
+.nav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.navItem {
+  color: #cbd5e1;
+  text-decoration: none;
+  padding: 0.65rem 0.75rem;
+  border-radius: 8px;
+  font-weight: 500;
+}
+
+.navItem:hover {
+  background: #1e293b;
+}
+
+.active {
+  background: #2563eb;
+  color: #ffffff;
+}
+
+.logoutButton {
+  margin-top: auto;
+  background: #334155;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 0.65rem 0.75rem;
+  cursor: pointer;
+}
+
+.logoutButton:hover {
+  background: #475569;
+}
+
+.contentArea {
+  flex-grow: 1;
+  padding: 2rem;
+}

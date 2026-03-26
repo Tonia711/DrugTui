@@ -1,0 +1,170 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.headerRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.headerRow h1 {
+  margin: 0;
+  font-size: 1.7rem;
+}
+
+.headerRow p {
+  margin: 0.35rem 0 0;
+  color: #64748b;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 360px minmax(0, 1fr);
+  gap: 1rem;
+}
+
+.panel {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 1rem;
+}
+
+.panel h2 {
+  margin-top: 0;
+  font-size: 1.1rem;
+}
+
+.panel label {
+  display: block;
+  margin-top: 0.65rem;
+  margin-bottom: 0.25rem;
+  font-size: 0.88rem;
+  color: #334155;
+}
+
+.panel input,
+.panel textarea {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 0.55rem 0.65rem;
+  font-size: 0.92rem;
+}
+
+.twoCol {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.6rem;
+}
+
+.listTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.8rem;
+}
+
+.search {
+  max-width: 280px;
+}
+
+.tableWrap {
+  overflow-x: auto;
+  margin-top: 0.6rem;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+th,
+td {
+  border-bottom: 1px solid #e2e8f0;
+  text-align: left;
+  padding: 0.6rem 0.5rem;
+  vertical-align: top;
+}
+
+th {
+  color: #475569;
+  font-weight: 600;
+}
+
+.badgeWarn,
+.badgeOk {
+  display: inline-block;
+  padding: 0.2rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.badgeWarn {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.badgeOk {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.adjustRow {
+  display: flex;
+  gap: 0.35rem;
+  align-items: center;
+}
+
+.adjustRow input {
+  width: 76px;
+}
+
+.inBtn,
+.outBtn {
+  padding: 0.35rem 0.55rem;
+  border: none;
+  border-radius: 6px;
+  color: #fff;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.inBtn {
+  background: #16a34a;
+}
+
+.inBtn:hover {
+  background: #15803d;
+}
+
+.outBtn {
+  background: #dc2626;
+}
+
+.outBtn:hover {
+  background: #b91c1c;
+}
+
+.error {
+  color: #b91c1c;
+  font-size: 0.86rem;
+}
+
+.success {
+  color: #15803d;
+  font-size: 0.86rem;
+}
+
+@media (max-width: 1100px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}
