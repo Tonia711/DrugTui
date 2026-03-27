@@ -41,7 +41,8 @@ function ZoneCard({ zone, onEdit, onDelete, onViewMap, showActions = true }) {
         <div className="flex items-center justify-between mb-1">
           <span className="text-xs text-gray-600">Capacity</span>
           <span className="text-xs text-gray-900">
-            {zone.currentCapacity}/{zone.capacity} ({capacityPercentage.toFixed(0)}%)
+            {zone.currentCapacity}/{zone.capacity} (
+            {capacityPercentage.toFixed(0)}%)
           </span>
         </div>
         <div className="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">

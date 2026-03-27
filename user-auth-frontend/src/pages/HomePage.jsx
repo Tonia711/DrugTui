@@ -49,8 +49,12 @@ function HomePage() {
   });
 
   const inventoryAlerts = [];
-  const expiredItems = inventoryData.filter((item) => item.status === "Expired");
-  const lowStockItems = inventoryData.filter((item) => item.status === "Low stock");
+  const expiredItems = inventoryData.filter(
+    (item) => item.status === "Expired",
+  );
+  const lowStockItems = inventoryData.filter(
+    (item) => item.status === "Low stock",
+  );
   const nearExpiryItems = inventoryData.filter(
     (item) => item.status === "Near Expiry",
   );
@@ -360,7 +364,9 @@ function HomePage() {
     },
   ];
 
-  const modulesWithAlerts = modules.filter((module) => module.alerts.length > 0);
+  const modulesWithAlerts = modules.filter(
+    (module) => module.alerts.length > 0,
+  );
 
   const zones = [
     {
@@ -446,11 +452,15 @@ function HomePage() {
           <div className="flex items-center gap-2 bg-rose-50 border border-rose-200 rounded-full px-3 py-1">
             <AlertCircle size={14} className="text-rose-600" />
             <span className="text-xs text-rose-700">
-              {modulesWithAlerts.reduce((sum, module) => sum + module.alerts.length, 0)}
-              {" "}
+              {modulesWithAlerts.reduce(
+                (sum, module) => sum + module.alerts.length,
+                0,
+              )}{" "}
               Active Alert
-              {modulesWithAlerts.reduce((sum, module) => sum + module.alerts.length, 0) >
-              1
+              {modulesWithAlerts.reduce(
+                (sum, module) => sum + module.alerts.length,
+                0,
+              ) > 1
                 ? "s"
                 : ""}
             </span>
