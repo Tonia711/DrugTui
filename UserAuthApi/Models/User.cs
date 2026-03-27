@@ -16,6 +16,10 @@ namespace UserAuthApi.Models
         [Required]
         public string PasswordHash { get; set; } = string.Empty;
 
+        [Required]
+        [StringLength(20)]
+        public string Role { get; set; } = "User";
+
         public string? Bio { get; set; }
     }
 

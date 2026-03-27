@@ -1,6 +1,6 @@
 # ASP.NET Core + React User Authentication Demo
 
-This project demonstrates a simple **user registration and login system** using:
+This project demonstrates a simple **admin-managed user authentication system** using:
 
 - 🔧 **Backend**: C# with ASP.NET Core Web API
 - 🎨 **Frontend**: React (Vite + Axios)
@@ -11,7 +11,7 @@ This project demonstrates a simple **user registration and login system** using:
 
 ## 🚀 Features
 
-- User **Registration**
+- **Admin-managed user creation**
 - User **Login**
 - **JWT-based Authentication**
 - Get current logged-in user (`/me`)
@@ -97,7 +97,7 @@ The backend provides the following API endpoints under the `/Users` route:
 
 | Method | Endpoint          | Description                                  |
 | ------ | ----------------- | -------------------------------------------- |
-| POST   | `/Users/register` | Register a new user                          |
+| POST   | `/Users/register` | Create a new user _(Admin token required)_   |
 | POST   | `/Users/login`    | Log in and receive JWT                       |
 | GET    | `/Users/me`       | Fetch current user profile _(Auth required)_ |
 | PUT    | `/Users/me`       | Update user information _(Auth required)_    |
@@ -109,7 +109,18 @@ You can test these endpoints via Swagger UI:
 
 All authenticated routes require a valid Bearer token in the `Authorization` header.
 
-#### 🧪 Example Credentials
+#### 🧪 Default Admin Credentials
+
+An admin account is seeded automatically at startup (if not already present):
+
+```json
+{
+  "email": "admin@drugtui.local",
+  "password": "Admin123!"
+}
+```
+
+#### 🧪 Example User Login Credentials
 
 ```json
 {
@@ -173,12 +184,13 @@ The frontend should be available at:
 
 ### 4. Testing the Flow
 
-1. Register a new user at `/register` (via frontend or Swagger)
-2. Log in with your credentials at `/login`
-3. The JWT token is automatically stored in `localStorage`
-4. Access `/me` to view your user profile
-5. You can edit your profile via the **Edit Profile** button (sends a `PUT /Users/me` request)
-6. You can delete your account via the **Delete Account** button (sends a `DELETE /Users/me` request)
+1. Log in as admin at `/Users/login`
+2. Use admin token to call `POST /Users/register` and create a user
+3. Log in with the new user's credentials at `/login`
+4. The JWT token is automatically stored in `localStorage`
+5. Access `/me` to view your user profile
+6. You can edit your profile via the **Edit Profile** button (sends a `PUT /Users/me` request)
+7. You can delete your account via the **Delete Account** button (sends a `DELETE /Users/me` request)
 
 ---
 
