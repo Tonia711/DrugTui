@@ -4,6 +4,8 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using Microsoft.OpenApi.Models;
+using Microsoft.AspNetCore.Identity;
+using UserAuthApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -78,6 +80,36 @@ builder.Services.AddSwaggerGen(c =>
 });
 
 var app = builder.Build();
+
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    var config = scope.ServiceProvider.GetRequiredService<IConfiguration>();
+
+    var adminEmail = config["AdminSeed:Email"];
+    var adminPassword = config["AdminSeed:Password"];
+    var adminUsername = config["AdminSeed:Username"] ?? "admin";
+    var adminBio = config["AdminSeed:Bio"];
+
+    if (!string.IsNullOrWhiteSpace(adminEmail) &&
+        !string.IsNullOrWhiteSpace(adminPassword) &&
+        !db.Users.Any(u => u.Email == adminEmail))
+    {
+        var admin = new User
+        {
+            Username = adminUsername,
+            Email = adminEmail,
+            Role = "Admin",
+            Bio = adminBio
+        };
+
+        var hasher = new PasswordHasher<User>();
+        admin.PasswordHash = hasher.HashPassword(admin, adminPassword);
+
+        db.Users.Add(admin);
+        db.SaveChanges();
+    }
+}
 
 app.UseHttpsRedirection();
 

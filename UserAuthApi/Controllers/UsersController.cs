@@ -27,8 +27,9 @@ namespace UserAuthApi.Controllers
         }
 
         // POST /Users/register
-        // Registers a new user with hashed password and stores it in the database
+        // Admin creates a new user with hashed password and stores it in the database
         [HttpPost("register")]
+        [Authorize(Roles = "Admin")]
         public IActionResult Register(RegisterDto dto)
         {
             if (_context.Users.Any(u => u.Email == dto.Email))
@@ -40,6 +41,7 @@ namespace UserAuthApi.Controllers
             {
                 Username = dto.Username,
                 Email = dto.Email,
+                Role = "User",
                 Bio = dto.Bio
             };
 
@@ -48,7 +50,7 @@ namespace UserAuthApi.Controllers
             _context.Users.Add(user);
             _context.SaveChanges();
 
-            return Ok(new { message = "User registered successfully!" });
+            return Ok(new { message = "User created successfully by admin." });
         }
 
         // POST /Users/login
@@ -78,7 +80,8 @@ namespace UserAuthApi.Controllers
             {
                 new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
                 new Claim(ClaimTypes.Name, user.Username),
-                new Claim(ClaimTypes.Email, user.Email)
+                new Claim(ClaimTypes.Email, user.Email),
+                new Claim(ClaimTypes.Role, user.Role)
             };
 
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["Jwt:Key"]!));
@@ -97,7 +100,7 @@ namespace UserAuthApi.Controllers
             return Ok(new
             {
                 token = tokenString,
-                user = new { user.Id, user.Username, user.Email, user.Bio }
+                user = new { user.Id, user.Username, user.Email, user.Role, user.Bio }
             });
         }
 
@@ -127,6 +130,7 @@ namespace UserAuthApi.Controllers
                 user.Id,
                 user.Username,
                 user.Email,
+                user.Role,
                 user.Bio
             });
         }
@@ -166,6 +170,7 @@ namespace UserAuthApi.Controllers
                 user.Id,
                 user.Username,
                 user.Email,
+                user.Role,
                 user.Bio
             });
         }
