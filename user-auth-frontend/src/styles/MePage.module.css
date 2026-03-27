@@ -1,9 +1,8 @@
 .container {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 100vh;
-  background: linear-gradient(to bottom right, #e0f2fe, #e9d5ff);
+  display: block;
+  padding: 2rem;
+  min-height: auto;
+  background: transparent;
   font-family: Arial, sans-serif;
 }
 
@@ -12,9 +11,9 @@
   border-radius: 16px;
   box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
   padding: 2rem;
-  max-width: 400px;
-  width: 90%;
-  text-align: center;
+  max-width: 980px;
+  width: 100%;
+  text-align: left;
 }
 
 .avatar {
@@ -32,6 +31,20 @@
   font-size: 0.95rem;
 }
 
+.roleBadge {
+  display: inline-block;
+  background: #e2e8f0;
+  color: #334155;
+  border-radius: 999px;
+  padding: 0.2rem 0.6rem;
+  font-size: 0.75rem;
+  margin-bottom: 0.4rem;
+}
+
+.userHeading {
+  margin: 0.2rem 0;
+}
+
 .joined {
   color: #aaa;
   font-size: 0.85rem;
@@ -41,6 +54,8 @@
 .about {
   text-align: left;
   margin-top: 1.5rem;
+  border-top: 1px solid #e2e8f0;
+  padding-top: 1rem;
 }
 
 .about h3 {
@@ -73,6 +88,12 @@
 .loading {
   font-size: 1.2rem;
   color: #555;
+}
+
+.success {
+  color: #15803d;
+  margin-top: 0.75rem;
+  font-size: 0.9rem;
 }
 
 .textarea {
@@ -143,6 +164,52 @@
   font-weight: 600;
   cursor: pointer;
   transition: background-color 0.3s ease;
+}
+
+.adminForm {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.userTableWrap {
+  margin-top: 1rem;
+  overflow-x: auto;
+}
+
+.userTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.86rem;
+}
+
+.userTable th,
+.userTable td {
+  border-bottom: 1px solid #e2e8f0;
+  padding: 0.55rem 0.45rem;
+  text-align: left;
+}
+
+.userTable th {
+  color: #475569;
+  font-weight: 600;
+}
+
+.selfTag {
+  color: #64748b;
+  font-size: 0.78rem;
+}
+
+.deleteButtonInline {
+  border: none;
+  border-radius: 6px;
+  padding: 0.3rem 0.5rem;
+  color: #fff;
+  background: #dc2626;
+  cursor: pointer;
+}
+
+.deleteButtonInline:hover {
+  background: #b91c1c;
 }
 
 .deleteButton:hover {
