@@ -15,6 +15,9 @@ namespace UserAuthApi.Models
         [MinLength(6)]
         public string Password { get; set; } = string.Empty;
 
-         public string? Bio { get; set; }
+        [Required]
+        public string RoleDescription { get; set; } = string.Empty;
+
+        public string? Bio { get; set; }
     }
 }

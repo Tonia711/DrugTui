@@ -26,6 +26,16 @@ namespace UserAuthApi.Controllers
             _config = config;
         }
 
+        private static string GetRoleDisplay(User user)
+        {
+            if (user.Role == "Admin")
+            {
+                return "Manager";
+            }
+
+            return string.IsNullOrWhiteSpace(user.Bio) ? user.Role : user.Bio;
+        }
+
         // POST /Users/register
         // Admin creates a new user with hashed password and stores it in the database
         [HttpPost("register")]
@@ -42,7 +52,7 @@ namespace UserAuthApi.Controllers
                 Username = dto.Username,
                 Email = dto.Email,
                 Role = "User",
-                Bio = dto.Bio
+                Bio = string.IsNullOrWhiteSpace(dto.RoleDescription) ? dto.Bio : dto.RoleDescription
             };
 
             user.PasswordHash = _hasher.HashPassword(user, dto.Password);
@@ -100,7 +110,14 @@ namespace UserAuthApi.Controllers
             return Ok(new
             {
                 token = tokenString,
-                user = new { user.Id, user.Username, user.Email, user.Role, user.Bio }
+                user = new
+                {
+                    user.Id,
+                    user.Username,
+                    user.Email,
+                    user.Role,
+                    roleDescription = GetRoleDisplay(user)
+                }
             });
         }
 
@@ -131,7 +148,7 @@ namespace UserAuthApi.Controllers
                 user.Username,
                 user.Email,
                 user.Role,
-                user.Bio
+                roleDescription = GetRoleDisplay(user)
             });
         }
 
@@ -160,8 +177,13 @@ namespace UserAuthApi.Controllers
                 return BadRequest("Username already exists.");
             }
 
+            if (user.Role == "Admin" && string.IsNullOrWhiteSpace(dto.RoleDescription))
+            {
+                return BadRequest("Admin role cannot be empty.");
+            }
+
             user.Username = dto.Username;
-            user.Bio = dto.Bio;
+            user.Bio = dto.RoleDescription;
 
             _context.SaveChanges();
 
@@ -171,7 +193,7 @@ namespace UserAuthApi.Controllers
                 user.Username,
                 user.Email,
                 user.Role,
-                user.Bio
+                roleDescription = GetRoleDisplay(user)
             });
         }
 
@@ -199,6 +221,141 @@ namespace UserAuthApi.Controllers
             _context.SaveChanges();
 
             return Ok(new { message = "User deleted successfully." });
+        }
+
+        // PUT /Users/me/password
+        // Changes the current authenticated user's password
+        [HttpPut("me/password")]
+        [Authorize]
+        public IActionResult ChangePassword(ChangePasswordDto dto)
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            if (userIdClaim == null)
+            {
+                return Unauthorized("Invalid token.");
+            }
+
+            int userId = int.Parse(userIdClaim.Value);
+            var user = _context.Users.FirstOrDefault(u => u.Id == userId);
+
+            if (user == null)
+            {
+                return NotFound("User not found.");
+            }
+
+            var verifyResult = _hasher.VerifyHashedPassword(user, user.PasswordHash, dto.CurrentPassword);
+            if (verifyResult == PasswordVerificationResult.Failed)
+            {
+                return BadRequest("Current password is incorrect.");
+            }
+
+            user.PasswordHash = _hasher.HashPassword(user, dto.NewPassword);
+            _context.SaveChanges();
+
+            return Ok(new { message = "Password changed successfully." });
+        }
+
+        // GET /Users
+        // Admin fetches all users
+        [HttpGet]
+        [Authorize(Roles = "Admin")]
+        public IActionResult GetAllUsers()
+        {
+            var users = _context.Users
+                .OrderBy(u => u.Id)
+                .Select(u => new
+                {
+                    u.Id,
+                    u.Username,
+                    u.Email,
+                    u.Role,
+                    roleDescription = u.Role == "Admin" ? "Manager" : (string.IsNullOrWhiteSpace(u.Bio) ? u.Role : u.Bio)
+                })
+                .ToList();
+
+            return Ok(users);
+        }
+
+        // DELETE /Users/{id}
+        // Admin deletes a user by id
+        [HttpDelete("{id:int}")]
+        [Authorize(Roles = "Admin")]
+        public IActionResult DeleteUserByAdmin(int id)
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            if (userIdClaim != null && int.TryParse(userIdClaim.Value, out var currentUserId) && currentUserId == id)
+            {
+                return BadRequest("Admin cannot delete the currently logged-in account.");
+            }
+
+            var user = _context.Users.FirstOrDefault(u => u.Id == id);
+            if (user == null)
+            {
+                return NotFound("User not found.");
+            }
+
+            _context.Users.Remove(user);
+            _context.SaveChanges();
+
+            return Ok(new { message = "User deleted successfully by admin." });
+        }
+
+        // PUT /Users/{id}/role
+        // Admin updates another user's role display text
+        [HttpPut("{id:int}/role")]
+        [Authorize(Roles = "Admin")]
+        public IActionResult UpdateUserRoleByAdmin(int id, UpdateUserRoleByAdminDto dto)
+        {
+            if (string.IsNullOrWhiteSpace(dto.RoleDescription))
+            {
+                return BadRequest("Role cannot be empty.");
+            }
+
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            if (userIdClaim != null && int.TryParse(userIdClaim.Value, out var currentUserId) && currentUserId == id)
+            {
+                return BadRequest("Admin cannot edit their own role here.");
+            }
+
+            var targetUser = _context.Users.FirstOrDefault(u => u.Id == id);
+            if (targetUser == null)
+            {
+                return NotFound("User not found.");
+            }
+
+            targetUser.Bio = dto.RoleDescription.Trim();
+            _context.SaveChanges();
+
+            return Ok(new
+            {
+                message = "User role updated successfully by admin.",
+                user = new
+                {
+                    targetUser.Id,
+                    targetUser.Username,
+                    targetUser.Email,
+                    targetUser.Role,
+                    roleDescription = GetRoleDisplay(targetUser)
+                }
+            });
+        }
+
+        // PUT /Users/{id}/reset-password
+        // Admin resets a user's password by id
+        [HttpPut("{id:int}/reset-password")]
+        [Authorize(Roles = "Admin")]
+        public IActionResult ResetUserPasswordByAdmin(int id, ResetUserPasswordDto dto)
+        {
+            var user = _context.Users.FirstOrDefault(u => u.Id == id);
+            if (user == null)
+            {
+                return NotFound("User not found.");
+            }
+
+            user.PasswordHash = _hasher.HashPassword(user, dto.NewPassword);
+            _context.SaveChanges();
+
+            return Ok(new { message = "User password reset successfully by admin." });
         }
     }
 }

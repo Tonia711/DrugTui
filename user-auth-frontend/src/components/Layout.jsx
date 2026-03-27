@@ -5,11 +5,14 @@ import useAxios from "../hooks/useAxios";
 import {
   LayoutDashboard,
   Package,
-  User,
+  PackageCheck,
+  ChevronDown,
+  Boxes,
   LogOut,
-  Building2,
+  NotebookPen,
   FileText,
   Settings,
+  User,
 } from "lucide-react";
 import logoImage from "../assets/159be5b2673509fff982b6d650d9a19a8a77d2d1.png";
 
@@ -24,6 +27,13 @@ function Layout() {
 
   const navClass = ({ isActive }) =>
     `w-full flex items-center gap-3 px-3 py-1.5 rounded-lg transition-colors text-left ${
+      isActive
+        ? "bg-gray-100 text-gray-900 font-bold"
+        : "text-gray-600 hover:bg-gray-100"
+    }`;
+
+  const subNavClass = ({ isActive }) =>
+    `w-full flex items-center px-3 py-1.5 rounded-lg transition-colors text-left text-xs ml-8 ${
       isActive
         ? "bg-gray-100 text-gray-900 font-bold"
         : "text-gray-600 hover:bg-gray-100"
@@ -54,9 +64,26 @@ function Layout() {
               <Package size={16} />
               <span className="text-xs">Inventory</span>
             </NavLink>
-            <NavLink to="/me" className={navClass}>
-              <User size={16} />
-              <span className="text-xs">Profile</span>
+
+            <div className="space-y-1">
+              <div className="w-full flex items-center justify-between gap-3 px-3 py-1.5 rounded-lg text-left text-gray-600">
+                <div className="flex items-center gap-3">
+                  <PackageCheck size={16} />
+                  <span className="text-xs">Procurement</span>
+                </div>
+                <ChevronDown size={14} />
+              </div>
+              <NavLink to="/procurement/purchase-order" className={subNavClass}>
+                Purchase Order
+              </NavLink>
+              <NavLink to="/procurement/invoice" className={subNavClass}>
+                Invoice
+              </NavLink>
+            </div>
+
+            <NavLink to="/department-request" className={navClass}>
+              <Boxes size={16} />
+              <span className="text-xs">Department Request</span>
             </NavLink>
           </nav>
         </div>
@@ -64,34 +91,27 @@ function Layout() {
         <div className="flex-1">
           <div className="text-xs text-gray-500 mb-3 px-3">Management</div>
           <nav className="space-y-1">
-            <button
-              type="button"
-              className="w-full flex items-center gap-3 px-3 py-1.5 rounded-lg text-gray-400 text-left cursor-not-allowed"
-              disabled
-            >
-              <Building2 size={16} />
+            <NavLink to="/storage-zone" className={navClass}>
+              <NotebookPen size={16} />
               <span className="text-xs">Storage Zone</span>
-            </button>
-            <button
-              type="button"
-              className="w-full flex items-center gap-3 px-3 py-1.5 rounded-lg text-gray-400 text-left cursor-not-allowed"
-              disabled
-            >
+            </NavLink>
+            <NavLink to="/reports" className={navClass}>
               <FileText size={16} />
               <span className="text-xs">Reports</span>
-            </button>
-            <button
-              type="button"
-              className="w-full flex items-center gap-3 px-3 py-1.5 rounded-lg text-gray-400 text-left cursor-not-allowed"
-              disabled
-            >
+            </NavLink>
+            <NavLink to="/settings" className={navClass}>
               <Settings size={16} />
               <span className="text-xs">Settings</span>
-            </button>
+            </NavLink>
           </nav>
         </div>
 
         <div className="mt-auto pt-6 border-t border-gray-200">
+          <NavLink to="/account" className={navClass}>
+            <User size={16} />
+            <span className="text-xs">Account</span>
+          </NavLink>
+
           <div className="px-3 py-2">
             <div className="text-xs text-gray-900 font-bold">
               {user?.username || "Pharmacist"}
