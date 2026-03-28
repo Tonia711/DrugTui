@@ -123,8 +123,10 @@ function InventoryPage() {
   const summary = {
     total: inventoryData.length,
     inStock: inventoryData.filter((item) => item.status === "In Stock").length,
-    lowStock: inventoryData.filter((item) => item.status === "Low stock").length,
-    nearExpiry: inventoryData.filter((item) => item.status === "Near Expiry").length,
+    lowStock: inventoryData.filter((item) => item.status === "Low stock")
+      .length,
+    nearExpiry: inventoryData.filter((item) => item.status === "Near Expiry")
+      .length,
     expired: inventoryData.filter((item) => item.status === "Expired").length,
   };
 
@@ -237,7 +239,9 @@ function InventoryPage() {
           </div>
 
           <div>
-            <label className="block text-xs text-gray-600 mb-1">Batch Number</label>
+            <label className="block text-xs text-gray-600 mb-1">
+              Batch Number
+            </label>
             <input
               className="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-gray-200"
               value={createForm.batchNumber}
@@ -303,13 +307,18 @@ function InventoryPage() {
           </div>
 
           <div>
-            <label className="block text-xs text-gray-600 mb-1">Expiry Date</label>
+            <label className="block text-xs text-gray-600 mb-1">
+              Expiry Date
+            </label>
             <input
               className="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-gray-200"
               type="date"
               value={createForm.expiryDate}
               onChange={(e) =>
-                setCreateForm((prev) => ({ ...prev, expiryDate: e.target.value }))
+                setCreateForm((prev) => ({
+                  ...prev,
+                  expiryDate: e.target.value,
+                }))
               }
             />
           </div>
@@ -490,11 +499,21 @@ function InventoryPage() {
           <table className="w-full">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
-                <th className="px-5 py-2.5 text-left text-xs text-gray-600">Drug Name</th>
-                <th className="px-5 py-2.5 text-left text-xs text-gray-600">Batch #</th>
-                <th className="px-5 py-2.5 text-left text-xs text-gray-600">Quantity</th>
-                <th className="px-5 py-2.5 text-left text-xs text-gray-600">Expiry Date</th>
-                <th className="px-5 py-2.5 text-left text-xs text-gray-600">Storage</th>
+                <th className="px-5 py-2.5 text-left text-xs text-gray-600">
+                  Drug Name
+                </th>
+                <th className="px-5 py-2.5 text-left text-xs text-gray-600">
+                  Batch #
+                </th>
+                <th className="px-5 py-2.5 text-left text-xs text-gray-600">
+                  Quantity
+                </th>
+                <th className="px-5 py-2.5 text-left text-xs text-gray-600">
+                  Expiry Date
+                </th>
+                <th className="px-5 py-2.5 text-left text-xs text-gray-600">
+                  Storage
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
@@ -514,12 +533,16 @@ function InventoryPage() {
                 filteredData.map((item) => (
                   <tr key={item.id} className="hover:bg-gray-50">
                     <td className="px-5 py-3 text-xs text-gray-900">
-                      <div className="font-medium text-gray-900">{item.name}</div>
+                      <div className="font-medium text-gray-900">
+                        {item.name}
+                      </div>
                       <div className="text-[11px] text-gray-500">
                         {item.notes?.trim() || item.name}
                       </div>
                     </td>
-                    <td className="px-5 py-3 text-xs text-gray-700">{item.batchNumber}</td>
+                    <td className="px-5 py-3 text-xs text-gray-700">
+                      {item.batchNumber}
+                    </td>
                     <td className="px-5 py-3 text-xs text-gray-700">
                       {item.stockQuantity} {item.unit}
                     </td>
