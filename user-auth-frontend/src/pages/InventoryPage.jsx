@@ -365,64 +365,32 @@ function InventoryPage() {
         </form>
       )}
 
-      <div className="max-w-[780px]">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {statCards.slice(0, 4).map((card) => {
-            const Icon = card.icon;
-            const isActive =
-              (card.status === null && selectedStatus === null) ||
-              card.status === selectedStatus;
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+        {statCards.map((card) => {
+          const Icon = card.icon;
+          const isActive =
+            (card.status === null && selectedStatus === null) ||
+            card.status === selectedStatus;
 
-            return (
-              <button
-                key={card.key}
-                type="button"
-                onClick={() => setSelectedStatus(card.status)}
-                className={`w-full rounded-xl border bg-white p-5 text-left transition-all ${
-                  isActive
-                    ? "border-blue-500 ring-2 ring-blue-200"
-                    : `${card.className} hover:border-gray-300`
-                }`}
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs text-gray-600">{card.label}</span>
-                  <Icon size={14} className={card.iconClassName} />
-                </div>
-                <p className="text-[30px] leading-none font-semibold text-gray-900">
-                  {card.value}
-                </p>
-              </button>
-            );
-          })}
-        </div>
-
-        <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-          {statCards.slice(4).map((card) => {
-            const Icon = card.icon;
-            const isActive = card.status === selectedStatus;
-
-            return (
-              <button
-                key={card.key}
-                type="button"
-                onClick={() => setSelectedStatus(card.status)}
-                className={`w-full rounded-xl border bg-white p-5 text-left transition-all ${
-                  isActive
-                    ? "border-blue-500 ring-2 ring-blue-200"
-                    : `${card.className} hover:border-gray-300`
-                }`}
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs text-gray-600">{card.label}</span>
-                  <Icon size={14} className={card.iconClassName} />
-                </div>
-                <p className="text-[30px] leading-none font-semibold text-gray-900">
-                  {card.value}
-                </p>
-              </button>
-            );
-          })}
-        </div>
+          return (
+            <button
+              key={card.key}
+              type="button"
+              onClick={() => setSelectedStatus(card.status)}
+              className={`w-full border rounded-lg p-4 text-left transition-all ${
+                isActive
+                  ? "border-blue-500 ring-2 ring-blue-200"
+                  : `${card.className} hover:border-gray-300`
+              }`}
+            >
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-[10px] text-gray-600">{card.label}</span>
+                <Icon size={14} className={card.iconClassName} />
+              </div>
+              <p className="text-sm text-gray-900">{card.value}</p>
+            </button>
+          );
+        })}
       </div>
 
       <div className="bg-white border border-gray-200 rounded-lg">
