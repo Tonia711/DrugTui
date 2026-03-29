@@ -7,6 +7,8 @@ import HomePage from "./pages/HomePage";
 import InventoryPage from "./pages/InventoryPage";
 import PurchaseOrderPage from "./pages/PurchaseOrderPage";
 import InvoicePage from "./pages/InvoicePage";
+import DepartmentRequestPage from "./pages/DepartmentRequestPage";
+import DepartmentRequestDetailsPage from "./pages/DepartmentRequestDetailsPage";
 import MePage from "./pages/MePage";
 import PlaceholderPage from "./pages/PlaceholderPage";
 
@@ -32,14 +34,10 @@ function App() {
           element={<PurchaseOrderPage />}
         />
         <Route path="procurement/invoice" element={<InvoicePage />} />
+        <Route path="department-request" element={<DepartmentRequestPage />} />
         <Route
-          path="department-request"
-          element={
-            <PlaceholderPage
-              title="Department Request"
-              subtitle="Department request workflow page."
-            />
-          }
+          path="department-request/:requestId"
+          element={<DepartmentRequestDetailsPage />}
         />
         <Route
           path="storage-zone"
