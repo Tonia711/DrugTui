@@ -150,7 +150,9 @@ function ItemDetailsPage() {
               />
             </div>
             <div>
-              <label className="block text-xs text-gray-700 mb-2">Brand Name</label>
+              <label className="block text-xs text-gray-700 mb-2">
+                Brand Name
+              </label>
               <input
                 type="text"
                 value={form.brandName}
@@ -175,7 +177,9 @@ function ItemDetailsPage() {
               />
             </div>
             <div>
-              <label className="block text-xs text-gray-700 mb-2">Barcode (GS1)</label>
+              <label className="block text-xs text-gray-700 mb-2">
+                Barcode (GS1)
+              </label>
               <input
                 type="text"
                 value={form.barcode}
@@ -190,7 +194,9 @@ function ItemDetailsPage() {
               />
             </div>
             <div className="col-span-2">
-              <label className="block text-xs text-gray-700 mb-2">Medsafe Approval Number</label>
+              <label className="block text-xs text-gray-700 mb-2">
+                Medsafe Approval Number
+              </label>
               <input
                 type="text"
                 value={form.medsafeNo}
@@ -232,8 +238,18 @@ function ItemDetailsPage() {
                   <option>Cream</option>
                 </select>
                 <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                  <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  <svg
+                    className="w-4 h-4 text-gray-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M19 9l-7 7-7-7"
+                    />
                   </svg>
                 </div>
               </div>
@@ -260,8 +276,18 @@ function ItemDetailsPage() {
                   <option>mcg</option>
                 </select>
                 <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                  <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  <svg
+                    className="w-4 h-4 text-gray-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M19 9l-7 7-7-7"
+                    />
                   </svg>
                 </div>
               </div>
@@ -330,7 +356,10 @@ function ItemDetailsPage() {
                   disabled={!isEditing}
                   value={form.storageCondition}
                   onChange={(e) =>
-                    setForm((prev) => ({ ...prev, storageCondition: e.target.value }))
+                    setForm((prev) => ({
+                      ...prev,
+                      storageCondition: e.target.value,
+                    }))
                   }
                   className={`w-full px-3 py-2 border border-gray-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-gray-200 appearance-none pr-8 ${
                     isEditing ? "bg-gray-50" : "bg-white"
@@ -343,14 +372,26 @@ function ItemDetailsPage() {
                   <option>Frozen</option>
                 </select>
                 <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                  <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  <svg
+                    className="w-4 h-4 text-gray-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M19 9l-7 7-7-7"
+                    />
                   </svg>
                 </div>
               </div>
             </div>
             <div>
-              <label className="block text-xs text-gray-700 mb-2">Hazard or Special Handling</label>
+              <label className="block text-xs text-gray-700 mb-2">
+                Hazard or Special Handling
+              </label>
               <div className="relative">
                 <select
                   disabled={!isEditing}
@@ -369,8 +410,18 @@ function ItemDetailsPage() {
                   <option>Light Sensitive</option>
                 </select>
                 <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                  <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  <svg
+                    className="w-4 h-4 text-gray-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M19 9l-7 7-7-7"
+                    />
                   </svg>
                 </div>
               </div>
@@ -454,7 +505,9 @@ function ItemDetailsPage() {
               disabled={isSaving}
             >
               <Save size={14} />
-              <span className="text-xs">{isSaving ? "Saving..." : "Save Changes"}</span>
+              <span className="text-xs">
+                {isSaving ? "Saving..." : "Save Changes"}
+              </span>
             </button>
           </>
         ) : (

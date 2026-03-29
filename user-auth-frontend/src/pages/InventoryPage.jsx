@@ -75,13 +75,15 @@ function InventoryPage() {
         ? Math.max(...medicines.map((item) => Number(item.id))) + 1
         : 1;
 
-      const status = normalizedQuantity <= Number(createForm.reorderLevel)
-        ? "Low stock"
-        : "In Stock";
+      const status =
+        normalizedQuantity <= Number(createForm.reorderLevel)
+          ? "Low stock"
+          : "In Stock";
 
-      const statusColor = status === "Low stock"
-        ? "bg-black text-white"
-        : "bg-gray-100 text-gray-700";
+      const statusColor =
+        status === "Low stock"
+          ? "bg-black text-white"
+          : "bg-gray-100 text-gray-700";
 
       setMedicines((prev) => [
         {
@@ -537,7 +539,9 @@ function InventoryPage() {
                     <td className="px-5 py-3 text-xs text-gray-700">
                       {item.storage}
                     </td>
-                    <td className="px-5 py-3 text-xs text-gray-700">{item.location}</td>
+                    <td className="px-5 py-3 text-xs text-gray-700">
+                      {item.location}
+                    </td>
                     <td className="px-5 py-3 text-xs">
                       <span
                         className={`inline-flex items-center justify-center px-2 py-0.5 rounded text-xs w-20 ${item.statusColor}`}
