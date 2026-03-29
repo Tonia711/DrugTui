@@ -5,6 +5,7 @@ import Layout from "./components/Layout";
 import LoginPage from "./pages/LoginPage";
 import HomePage from "./pages/HomePage";
 import InventoryPage from "./pages/InventoryPage";
+import ItemDetailsPage from "./pages/ItemDetailsPage";
 import PurchaseOrderPage from "./pages/PurchaseOrderPage";
 import InvoicePage from "./pages/InvoicePage";
 import DepartmentRequestPage from "./pages/DepartmentRequestPage";
@@ -29,6 +30,7 @@ function App() {
         <Route path="home" element={<Navigate to="/dashboard" />} />
         <Route path="dashboard" element={<HomePage />} />
         <Route path="inventory" element={<InventoryPage />} />
+        <Route path="inventory/:itemId" element={<ItemDetailsPage />} />
         <Route
           path="procurement/purchase-order"
           element={<PurchaseOrderPage />}

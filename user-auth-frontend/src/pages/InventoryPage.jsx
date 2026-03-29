@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import useAxios from "../hooks/useAxios";
+import { useNavigate } from "react-router-dom";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -11,6 +11,7 @@ import {
   TrendingUp,
   XCircle,
 } from "lucide-react";
+import { inventoryData as designInventoryData } from "../data/inventoryData";
 
 const initialCreateForm = {
   name: "",
@@ -24,6 +25,7 @@ const initialCreateForm = {
 };
 
 function InventoryPage() {
+  const navigate = useNavigate();
   const [keyword, setKeyword] = useState("");
   const [selectedStatus, setSelectedStatus] = useState(null);
   const [showStatusDropdown, setShowStatusDropdown] = useState(false);
@@ -33,22 +35,8 @@ function InventoryPage() {
   const [error, setError] = useState("");
   const statusDropdownRef = useRef(null);
 
-  const queryUrl = useMemo(() => {
-    if (!keyword.trim()) return "/Medicines";
-    return `/Medicines?keyword=${encodeURIComponent(keyword.trim())}`;
-  }, [keyword]);
-
-  const {
-    data: medicines,
-    isLoading,
-    refresh,
-  } = useAxios({ method: "get", url: queryUrl });
-
-  const { sendRequest: createMedicine, isLoading: creating } = useAxios({
-    method: "post",
-    url: "/Medicines",
-    runOnMount: false,
-  });
+  const [medicines, setMedicines] = useState(designInventoryData);
+  const [isLoading, setIsLoading] = useState(false);
 
   const statusOptions = [
     "All Status",
@@ -78,47 +66,68 @@ function InventoryPage() {
     setError("");
 
     try {
-      await createMedicine({
+      const normalizedQuantity = Number(createForm.initialStock);
+      const displayQuantity = Number.isNaN(normalizedQuantity)
+        ? `0 ${createForm.unit}`
+        : `${normalizedQuantity} ${createForm.unit}`;
+
+      const nextId = medicines.length
+        ? Math.max(...medicines.map((item) => Number(item.id))) + 1
+        : 1;
+
+      const status = normalizedQuantity <= Number(createForm.reorderLevel)
+        ? "Low stock"
+        : "In Stock";
+
+      const statusColor = status === "Low stock"
+        ? "bg-black text-white"
+        : "bg-gray-100 text-gray-700";
+
+      setMedicines((prev) => [
+        {
+          id: nextId,
+          drugName: createForm.name,
+          genericName: createForm.name,
+          batchNumber: createForm.batchNumber,
+          quantity: displayQuantity,
+          expiryDate: createForm.expiryDate || "-",
+          storage: "Ambient",
+          location: "A-0-000",
+          status,
+          statusColor,
+        },
+        ...prev,
+      ]);
+
+      setCreateForm({
         ...createForm,
-        initialStock: Number(createForm.initialStock),
-        reorderLevel: Number(createForm.reorderLevel),
-        expiryDate: createForm.expiryDate || null,
+        name: "",
+        batchNumber: "",
+        initialStock: 0,
+        reorderLevel: 10,
+        expiryDate: "",
+        supplier: "",
+        notes: "",
       });
-      setCreateForm(initialCreateForm);
       setShowCreateForm(false);
       setMessage("Medication created successfully.");
-      refresh();
     } catch (err) {
-      setError(err.response?.data || "Failed to create medication.");
+      setError(err?.response?.data || "Failed to create medication.");
     }
   };
 
-  const inventoryData = (medicines || []).map((item) => {
-    const isLowStock = item.stockQuantity <= item.reorderLevel;
-    let status = "In Stock";
+  const inventoryData = medicines;
 
-    if (item.expiryDate) {
-      const now = new Date();
-      const expiryDate = new Date(item.expiryDate);
-      const dayDiff = (expiryDate - now) / (1000 * 60 * 60 * 24);
+  const filteredData = inventoryData.filter((item) => {
+    const hitKeyword =
+      !keyword.trim() ||
+      item.drugName.toLowerCase().includes(keyword.trim().toLowerCase()) ||
+      item.genericName.toLowerCase().includes(keyword.trim().toLowerCase()) ||
+      item.batchNumber.toLowerCase().includes(keyword.trim().toLowerCase());
 
-      if (dayDiff < 0) {
-        status = "Expired";
-      } else if (dayDiff <= 30) {
-        status = "Near Expiry";
-      } else if (isLowStock) {
-        status = "Low stock";
-      }
-    } else if (isLowStock) {
-      status = "Low stock";
-    }
-
-    return { ...item, status };
+    const hitStatus = !selectedStatus || item.status === selectedStatus;
+    return hitKeyword && hitStatus;
   });
-
-  const filteredData = selectedStatus
-    ? inventoryData.filter((item) => item.status === selectedStatus)
-    : inventoryData;
 
   const summary = {
     total: inventoryData.length,
@@ -128,21 +137,6 @@ function InventoryPage() {
     nearExpiry: inventoryData.filter((item) => item.status === "Near Expiry")
       .length,
     expired: inventoryData.filter((item) => item.status === "Expired").length,
-  };
-
-  const resolveStorageLabel = (item) => {
-    const normalizedNotes = (item.notes || "").toLowerCase();
-    if (normalizedNotes.includes("frozen") || normalizedNotes.includes("-20")) {
-      return "Frozen";
-    }
-    if (
-      normalizedNotes.includes("cold") ||
-      normalizedNotes.includes("fridge") ||
-      normalizedNotes.includes("2-8")
-    ) {
-      return "Cold Storage";
-    }
-    return "Ambient";
   };
 
   const statCards = [
@@ -194,6 +188,19 @@ function InventoryPage() {
   ];
 
   const displayStatus = selectedStatus || "All Status";
+
+  const getStatusClassName = (status) => {
+    if (status === "Expired") {
+      return "bg-red-100 text-red-700";
+    }
+    if (status === "Near Expiry") {
+      return "bg-orange-100 text-orange-700";
+    }
+    if (status === "Low stock") {
+      return "bg-amber-100 text-amber-700";
+    }
+    return "bg-green-100 text-green-700";
+  };
 
   return (
     <div className="p-8 flex flex-col gap-4">
@@ -356,10 +363,10 @@ function InventoryPage() {
             </button>
             <button
               type="submit"
-              disabled={creating}
+              disabled={isLoading}
               className="px-3 py-1.5 text-xs bg-gray-900 text-white rounded-lg hover:bg-gray-800 disabled:opacity-60"
             >
-              {creating ? "Saving..." : "Create Medication"}
+              {isLoading ? "Saving..." : "Create Medication"}
             </button>
           </div>
         </form>
@@ -482,45 +489,61 @@ function InventoryPage() {
                 <th className="px-5 py-2.5 text-left text-xs text-gray-600">
                   Storage
                 </th>
+                <th className="px-5 py-2.5 text-left text-xs text-gray-600">
+                  Location
+                </th>
+                <th className="px-5 py-2.5 text-left text-xs text-gray-600">
+                  Status
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
               {isLoading ? (
                 <tr>
-                  <td colSpan={5} className="px-5 py-6 text-xs text-gray-500">
+                  <td colSpan={7} className="px-5 py-6 text-xs text-gray-500">
                     Loading...
                   </td>
                 </tr>
               ) : !filteredData.length ? (
                 <tr>
-                  <td colSpan={5} className="px-5 py-6 text-xs text-gray-500">
+                  <td colSpan={7} className="px-5 py-6 text-xs text-gray-500">
                     No medication records.
                   </td>
                 </tr>
               ) : (
                 filteredData.map((item) => (
-                  <tr key={item.id} className="hover:bg-gray-50">
+                  <tr
+                    key={item.id}
+                    className="hover:bg-gray-50 cursor-pointer transition-colors"
+                    onClick={() => navigate(`/inventory/${item.id}`)}
+                  >
                     <td className="px-5 py-3 text-xs text-gray-900">
                       <div className="font-medium text-gray-900">
-                        {item.name}
+                        {item.drugName}
                       </div>
                       <div className="text-[11px] text-gray-500">
-                        {item.notes?.trim() || item.name}
+                        {item.genericName}
                       </div>
                     </td>
                     <td className="px-5 py-3 text-xs text-gray-700">
                       {item.batchNumber}
                     </td>
                     <td className="px-5 py-3 text-xs text-gray-700">
-                      {item.stockQuantity} {item.unit}
+                      {item.quantity}
                     </td>
                     <td className="px-5 py-3 text-xs text-gray-700">
-                      {item.expiryDate
-                        ? new Date(item.expiryDate).toLocaleDateString()
-                        : "-"}
+                      {item.expiryDate}
                     </td>
                     <td className="px-5 py-3 text-xs text-gray-700">
-                      {resolveStorageLabel(item)}
+                      {item.storage}
+                    </td>
+                    <td className="px-5 py-3 text-xs text-gray-700">{item.location}</td>
+                    <td className="px-5 py-3 text-xs">
+                      <span
+                        className={`inline-flex items-center justify-center px-2 py-0.5 rounded text-xs w-20 ${item.statusColor}`}
+                      >
+                        {item.status}
+                      </span>
                     </td>
                   </tr>
                 ))
