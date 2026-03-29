@@ -279,11 +279,21 @@ function PurchaseOrderPage() {
           <table className="w-full">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
-                <th className="px-5 py-2.5 text-left text-xs text-gray-600">Order ID</th>
-                <th className="px-5 py-2.5 text-left text-xs text-gray-600">Description</th>
-                <th className="px-5 py-2.5 text-left text-xs text-gray-600">Supplier</th>
-                <th className="px-5 py-2.5 text-left text-xs text-gray-600">Order Time</th>
-                <th className="px-5 py-2.5 text-left text-xs text-gray-600">Status</th>
+                <th className="px-5 py-2.5 text-left text-xs text-gray-600">
+                  Order ID
+                </th>
+                <th className="px-5 py-2.5 text-left text-xs text-gray-600">
+                  Description
+                </th>
+                <th className="px-5 py-2.5 text-left text-xs text-gray-600">
+                  Supplier
+                </th>
+                <th className="px-5 py-2.5 text-left text-xs text-gray-600">
+                  Order Time
+                </th>
+                <th className="px-5 py-2.5 text-left text-xs text-gray-600">
+                  Status
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
@@ -296,10 +306,18 @@ function PurchaseOrderPage() {
               ) : (
                 filteredOrders.map((order) => (
                   <tr key={order.id} className="hover:bg-gray-50">
-                    <td className="px-5 py-3 text-xs text-gray-900 font-medium">{order.id}</td>
-                    <td className="px-5 py-3 text-xs text-gray-700">{order.description}</td>
-                    <td className="px-5 py-3 text-xs text-gray-700">{order.supplier}</td>
-                    <td className="px-5 py-3 text-xs text-gray-700">{order.time}</td>
+                    <td className="px-5 py-3 text-xs text-gray-900 font-medium">
+                      {order.id}
+                    </td>
+                    <td className="px-5 py-3 text-xs text-gray-700">
+                      {order.description}
+                    </td>
+                    <td className="px-5 py-3 text-xs text-gray-700">
+                      {order.supplier}
+                    </td>
+                    <td className="px-5 py-3 text-xs text-gray-700">
+                      {order.time}
+                    </td>
                     <td className="px-5 py-3">
                       <span
                         className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${getStatusClassName(

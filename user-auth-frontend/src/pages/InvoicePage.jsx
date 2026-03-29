@@ -111,9 +111,12 @@ function InvoicePage() {
   }, [keyword, selectedStatus]);
 
   const getStatusClassName = (status) => {
-    if (status === "Completed") return "bg-green-50 text-green-700 border-green-200";
-    if (status === "Pending") return "bg-yellow-50 text-yellow-700 border-yellow-200";
-    if (status === "Discrepancy") return "bg-red-50 text-red-700 border-red-200";
+    if (status === "Completed")
+      return "bg-green-50 text-green-700 border-green-200";
+    if (status === "Pending")
+      return "bg-yellow-50 text-yellow-700 border-yellow-200";
+    if (status === "Discrepancy")
+      return "bg-red-50 text-red-700 border-red-200";
     return "bg-gray-50 text-gray-700 border-gray-200";
   };
 
@@ -234,12 +237,24 @@ function InvoicePage() {
           <table className="w-full">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
-                <th className="px-5 py-2.5 text-left text-xs text-gray-600">Invoice #</th>
-                <th className="px-5 py-2.5 text-left text-xs text-gray-600">Supplier</th>
-                <th className="px-5 py-2.5 text-left text-xs text-gray-600">Date</th>
-                <th className="px-5 py-2.5 text-left text-xs text-gray-600">Amount</th>
-                <th className="px-5 py-2.5 text-left text-xs text-gray-600">PO #</th>
-                <th className="px-5 py-2.5 text-left text-xs text-gray-600">Status</th>
+                <th className="px-5 py-2.5 text-left text-xs text-gray-600">
+                  Invoice #
+                </th>
+                <th className="px-5 py-2.5 text-left text-xs text-gray-600">
+                  Supplier
+                </th>
+                <th className="px-5 py-2.5 text-left text-xs text-gray-600">
+                  Date
+                </th>
+                <th className="px-5 py-2.5 text-left text-xs text-gray-600">
+                  Amount
+                </th>
+                <th className="px-5 py-2.5 text-left text-xs text-gray-600">
+                  PO #
+                </th>
+                <th className="px-5 py-2.5 text-left text-xs text-gray-600">
+                  Status
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
@@ -255,10 +270,18 @@ function InvoicePage() {
                     <td className="px-5 py-3 text-xs text-gray-900 font-medium">
                       {invoice.invoiceNumber}
                     </td>
-                    <td className="px-5 py-3 text-xs text-gray-700">{invoice.supplier}</td>
-                    <td className="px-5 py-3 text-xs text-gray-700">{invoice.date}</td>
-                    <td className="px-5 py-3 text-xs text-gray-700">${invoice.amount}</td>
-                    <td className="px-5 py-3 text-xs text-gray-700">{invoice.poNumber}</td>
+                    <td className="px-5 py-3 text-xs text-gray-700">
+                      {invoice.supplier}
+                    </td>
+                    <td className="px-5 py-3 text-xs text-gray-700">
+                      {invoice.date}
+                    </td>
+                    <td className="px-5 py-3 text-xs text-gray-700">
+                      ${invoice.amount}
+                    </td>
+                    <td className="px-5 py-3 text-xs text-gray-700">
+                      {invoice.poNumber}
+                    </td>
                     <td className="px-5 py-3 text-xs">
                       <span
                         className={`inline-flex border px-2 py-0.5 rounded-full text-xs font-medium ${getStatusClassName(
@@ -299,7 +322,9 @@ function InvoicePage() {
             </div>
 
             <div className="p-5">
-              <label className="block text-xs text-gray-600 mb-2">Invoice File</label>
+              <label className="block text-xs text-gray-600 mb-2">
+                Invoice File
+              </label>
               <input
                 type="file"
                 accept=".pdf,.jpg,.jpeg,.png,.csv"
@@ -307,7 +332,9 @@ function InvoicePage() {
                 className="w-full text-xs border border-gray-300 rounded-lg p-2"
               />
               {selectedFile && (
-                <p className="text-xs text-gray-600 mt-2">Selected: {selectedFile.name}</p>
+                <p className="text-xs text-gray-600 mt-2">
+                  Selected: {selectedFile.name}
+                </p>
               )}
             </div>
 
