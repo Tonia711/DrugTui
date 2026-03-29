@@ -24,13 +24,11 @@ function DepartmentRequestPage() {
       ) {
         setShowStatusDropdown(false);
       }
-
     };
 
     document.addEventListener("mousedown", onDocumentClick);
     return () => document.removeEventListener("mousedown", onDocumentClick);
   }, []);
-
 
   const stats = useMemo(() => {
     const countByStatus = (status) =>
@@ -98,10 +96,7 @@ function DepartmentRequestPage() {
     if (status === "Rejected" || status === "Accepted - Awaiting Restock") {
       return "bg-red-100 text-red-700";
     }
-    if (
-      status === "Pending Acceptance" ||
-      status === "Accepted / Processing"
-    ) {
+    if (status === "Pending Acceptance" || status === "Accepted / Processing") {
       return "bg-amber-100 text-amber-700";
     }
     return "bg-blue-100 text-blue-700";
@@ -148,7 +143,9 @@ function DepartmentRequestPage() {
 
       <div className="bg-white border border-gray-200 rounded-lg">
         <div className="p-5 border-b border-gray-200">
-          <h2 className="text-sm text-gray-900 mb-3">Department Request List</h2>
+          <h2 className="text-sm text-gray-900 mb-3">
+            Department Request List
+          </h2>
 
           <div className="flex items-center gap-3">
             <div className="flex-1 relative">
@@ -218,12 +215,24 @@ function DepartmentRequestPage() {
           <table className="w-full">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
-                <th className="px-5 py-2.5 text-left text-xs text-gray-600">Request ID</th>
-                <th className="px-5 py-2.5 text-left text-xs text-gray-600">Department</th>
-                <th className="px-5 py-2.5 text-left text-xs text-gray-600">Description</th>
-                <th className="px-5 py-2.5 text-left text-xs text-gray-600">Requested By</th>
-                <th className="px-5 py-2.5 text-left text-xs text-gray-600">Time</th>
-                <th className="px-5 py-2.5 text-center text-xs text-gray-600 w-52">Status</th>
+                <th className="px-5 py-2.5 text-left text-xs text-gray-600">
+                  Request ID
+                </th>
+                <th className="px-5 py-2.5 text-left text-xs text-gray-600">
+                  Department
+                </th>
+                <th className="px-5 py-2.5 text-left text-xs text-gray-600">
+                  Description
+                </th>
+                <th className="px-5 py-2.5 text-left text-xs text-gray-600">
+                  Requested By
+                </th>
+                <th className="px-5 py-2.5 text-left text-xs text-gray-600">
+                  Time
+                </th>
+                <th className="px-5 py-2.5 text-center text-xs text-gray-600 w-52">
+                  Status
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
@@ -240,11 +249,21 @@ function DepartmentRequestPage() {
                     className="hover:bg-gray-50 cursor-pointer"
                     onClick={() => navigate(`/department-request/${row.id}`)}
                   >
-                    <td className="px-5 py-3 text-xs text-gray-900">{row.id}</td>
-                    <td className="px-5 py-3 text-xs text-gray-900">{row.department}</td>
-                    <td className="px-5 py-3 text-xs text-gray-900">{row.description}</td>
-                    <td className="px-5 py-3 text-xs text-gray-900">{row.requestedBy}</td>
-                    <td className="px-5 py-3 text-xs text-gray-900">{row.time}</td>
+                    <td className="px-5 py-3 text-xs text-gray-900">
+                      {row.id}
+                    </td>
+                    <td className="px-5 py-3 text-xs text-gray-900">
+                      {row.department}
+                    </td>
+                    <td className="px-5 py-3 text-xs text-gray-900">
+                      {row.description}
+                    </td>
+                    <td className="px-5 py-3 text-xs text-gray-900">
+                      {row.requestedBy}
+                    </td>
+                    <td className="px-5 py-3 text-xs text-gray-900">
+                      {row.time}
+                    </td>
                     <td className="px-5 py-3 text-xs">
                       <span
                         className={`inline-flex w-40 min-h-7 items-center justify-center rounded-md px-3 py-1 text-xs whitespace-nowrap ${getStatusClassName(

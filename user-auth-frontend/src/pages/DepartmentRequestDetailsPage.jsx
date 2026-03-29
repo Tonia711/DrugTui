@@ -78,7 +78,9 @@ function DepartmentRequestDetailsPage() {
 
   const getProgressPercentage = () => {
     const states = [0, 1, 2, 3, 4].map(getStepState);
-    const finishedStepCount = states.filter((state) => state === "finished").length;
+    const finishedStepCount = states.filter(
+      (state) => state === "finished",
+    ).length;
     return Math.max(0, ((finishedStepCount - 1) / 4) * 100);
   };
 
@@ -94,14 +96,16 @@ function DepartmentRequestDetailsPage() {
       id: 2,
       title: "Accepted / Processing",
       subtitle:
-        request.acceptedBy || (getStepState(1) === "in-progress" ? "In Progress" : null),
+        request.acceptedBy ||
+        (getStepState(1) === "in-progress" ? "In Progress" : null),
       time: request.acceptedTime || "",
       state: getStepState(1),
     },
     {
       id: 3,
       title: "Ready for Delivery",
-      subtitle: request.readyBy || (getStepState(2) === "in-progress" ? "Ready" : null),
+      subtitle:
+        request.readyBy || (getStepState(2) === "in-progress" ? "Ready" : null),
       time: request.readyTime || "",
       state: getStepState(2),
     },
@@ -111,7 +115,10 @@ function DepartmentRequestDetailsPage() {
       subtitle:
         request.dispatchedBy ||
         (getStepState(3) === "in-progress" ? "Dispatched" : null),
-      time: request.dispatchedBy && request.dispatchedTime ? `${request.dispatchedDate} ${request.dispatchedTime}` : "",
+      time:
+        request.dispatchedBy && request.dispatchedTime
+          ? `${request.dispatchedDate} ${request.dispatchedTime}`
+          : "",
       state: getStepState(3),
     },
     {
@@ -120,7 +127,10 @@ function DepartmentRequestDetailsPage() {
       subtitle:
         request.completedBy ||
         (getStepState(4) === "in-progress" ? "Completed" : null),
-      time: request.completedBy && request.completedTime ? `${request.completedDate} ${request.completedTime}` : "",
+      time:
+        request.completedBy && request.completedTime
+          ? `${request.completedDate} ${request.completedTime}`
+          : "",
       state: getStepState(4),
     },
   ];
@@ -143,11 +153,14 @@ function DepartmentRequestDetailsPage() {
       <div className="bg-white rounded-lg border border-gray-200 p-6 mb-6">
         <div className="relative">
           {/* Progress Line */}
-          <div className="absolute top-5 left-0 right-0 h-0.5 bg-gray-200" style={{ left: '20px', right: '20px' }}>
-            <div 
+          <div
+            className="absolute top-5 left-0 right-0 h-0.5 bg-gray-200"
+            style={{ left: "20px", right: "20px" }}
+          >
+            <div
               className="h-full bg-blue-500 transition-all duration-500"
-              style={{ 
-                width: `${getProgressPercentage()}%` 
+              style={{
+                width: `${getProgressPercentage()}%`,
               }}
             />
           </div>
@@ -155,15 +168,23 @@ function DepartmentRequestDetailsPage() {
           {/* Steps */}
           <div className="relative flex justify-between">
             {timelineSteps.map((step, index) => (
-              <div key={step.id} className="flex flex-col items-center" style={{ minWidth: '120px' }}>
+              <div
+                key={step.id}
+                className="flex flex-col items-center"
+                style={{ minWidth: "120px" }}
+              >
                 {/* Circle */}
-                <div className={`
+                <div
+                  className={`
                   w-10 h-10 rounded-full flex items-center justify-center mb-2 z-10 transition-all
-                  ${step.state === 'finished'
-                    ? 'bg-blue-500 text-white' 
-                    : 'bg-white border-2 border-gray-300 text-gray-400'}
-                `}>
-                  {step.state === 'finished' ? (
+                  ${
+                    step.state === "finished"
+                      ? "bg-blue-500 text-white"
+                      : "bg-white border-2 border-gray-300 text-gray-400"
+                  }
+                `}
+                >
+                  {step.state === "finished" ? (
                     <Check size={20} />
                   ) : (
                     <span className="text-xs">{index + 1}</span>
@@ -171,9 +192,11 @@ function DepartmentRequestDetailsPage() {
                 </div>
 
                 {/* Label */}
-                <p className={`mb-1 text-center text-xs ${
-                  step.state === 'waiting' ? 'text-gray-400' : 'text-gray-900'
-                }`}>
+                <p
+                  className={`mb-1 text-center text-xs ${
+                    step.state === "waiting" ? "text-gray-400" : "text-gray-900"
+                  }`}
+                >
                   {step.title}
                 </p>
 
@@ -187,7 +210,7 @@ function DepartmentRequestDetailsPage() {
                   </div>
                 )}
 
-                {step.state === 'waiting' && !step.subtitle && (
+                {step.state === "waiting" && !step.subtitle && (
                   <p className="text-xs text-gray-400">Waiting</p>
                 )}
               </div>
@@ -212,38 +235,28 @@ function DepartmentRequestDetailsPage() {
             </div>
           </div>
           <div className="flex gap-2">
-            {request.status === 'Pending Acceptance' && (
+            {request.status === "Pending Acceptance" && (
               <>
-                <button 
-                  className="px-4 py-2 border border-red-300 text-red-600 rounded-lg text-xs hover:bg-red-50 transition-colors"
-                >
+                <button className="px-4 py-2 border border-red-300 text-red-600 rounded-lg text-xs hover:bg-red-50 transition-colors">
                   Reject Request
                 </button>
-                <button 
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg text-xs hover:bg-blue-700 transition-colors"
-                >
+                <button className="px-4 py-2 bg-blue-600 text-white rounded-lg text-xs hover:bg-blue-700 transition-colors">
                   Accept Request
                 </button>
               </>
             )}
-            {request.status === 'Accepted / Processing' && (
-              <button 
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg text-xs hover:bg-blue-700 transition-colors"
-              >
+            {request.status === "Accepted / Processing" && (
+              <button className="px-4 py-2 bg-blue-600 text-white rounded-lg text-xs hover:bg-blue-700 transition-colors">
                 Mark Ready for Delivery
               </button>
             )}
-            {request.status === 'Ready for Delivery' && (
-              <button 
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg text-xs hover:bg-blue-700 transition-colors"
-              >
+            {request.status === "Ready for Delivery" && (
+              <button className="px-4 py-2 bg-blue-600 text-white rounded-lg text-xs hover:bg-blue-700 transition-colors">
                 Dispatch
               </button>
             )}
-            {request.status === 'Dispatched' && (
-              <button 
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg text-xs hover:bg-blue-700 transition-colors"
-              >
+            {request.status === "Dispatched" && (
+              <button className="px-4 py-2 bg-blue-600 text-white rounded-lg text-xs hover:bg-blue-700 transition-colors">
                 Mark as Completed
               </button>
             )}
@@ -291,7 +304,9 @@ function DepartmentRequestDetailsPage() {
                   <Package size={12} />
                   Dispatched By
                 </div>
-                <div className="text-xs text-gray-900">{request.dispatchedBy}</div>
+                <div className="text-xs text-gray-900">
+                  {request.dispatchedBy}
+                </div>
               </div>
               <div>
                 <div className="text-xs text-gray-500 mb-1 flex items-center gap-1">
@@ -313,7 +328,9 @@ function DepartmentRequestDetailsPage() {
                   <CheckCircle size={12} />
                   Completed By
                 </div>
-                <div className="text-xs text-gray-900">{request.completedBy}</div>
+                <div className="text-xs text-gray-900">
+                  {request.completedBy}
+                </div>
               </div>
               <div>
                 <div className="text-xs text-gray-500 mb-1 flex items-center gap-1">
@@ -336,33 +353,65 @@ function DepartmentRequestDetailsPage() {
           <table className="w-full">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
-                <th className="px-5 py-2.5 text-left text-xs text-gray-600">Medicine Name</th>
-                <th className="px-5 py-2.5 text-left text-xs text-gray-600">Specification</th>
-                <th className="px-5 py-2.5 text-left text-xs text-gray-600">Requested Qty</th>
-                <th className="px-5 py-2.5 text-left text-xs text-gray-600">Available Stock</th>
+                <th className="px-5 py-2.5 text-left text-xs text-gray-600">
+                  Medicine Name
+                </th>
+                <th className="px-5 py-2.5 text-left text-xs text-gray-600">
+                  Specification
+                </th>
+                <th className="px-5 py-2.5 text-left text-xs text-gray-600">
+                  Requested Qty
+                </th>
+                <th className="px-5 py-2.5 text-left text-xs text-gray-600">
+                  Available Stock
+                </th>
                 {request.medicines[0]?.approvedQty !== undefined && (
-                  <th className="px-5 py-2.5 text-left text-xs text-gray-600">Approved Qty</th>
+                  <th className="px-5 py-2.5 text-left text-xs text-gray-600">
+                    Approved Qty
+                  </th>
                 )}
-                <th className="px-5 py-2.5 text-left text-xs text-gray-600">Batch Number</th>
-                <th className="px-5 py-2.5 text-left text-xs text-gray-600">Expiry Date</th>
+                <th className="px-5 py-2.5 text-left text-xs text-gray-600">
+                  Batch Number
+                </th>
+                <th className="px-5 py-2.5 text-left text-xs text-gray-600">
+                  Expiry Date
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
               {request.medicines.map((item) => (
                 <tr key={item.id}>
-                  <td className="px-5 py-3 text-xs text-gray-900 align-middle">{item.name}</td>
-                  <td className="px-5 py-3 text-xs text-gray-900 align-middle">{item.specification}</td>
-                  <td className="px-5 py-3 text-xs text-gray-900 align-middle">{item.requestedQty}</td>
+                  <td className="px-5 py-3 text-xs text-gray-900 align-middle">
+                    {item.name}
+                  </td>
+                  <td className="px-5 py-3 text-xs text-gray-900 align-middle">
+                    {item.specification}
+                  </td>
+                  <td className="px-5 py-3 text-xs text-gray-900 align-middle">
+                    {item.requestedQty}
+                  </td>
                   <td className="px-5 py-3 text-xs align-middle">
-                    <span className={item.availableStock < item.requestedQty ? 'text-red-600' : 'text-gray-900'}>
+                    <span
+                      className={
+                        item.availableStock < item.requestedQty
+                          ? "text-red-600"
+                          : "text-gray-900"
+                      }
+                    >
                       {item.availableStock}
                     </span>
                   </td>
                   {item.approvedQty !== undefined && (
-                    <td className="px-5 py-3 text-xs text-green-600 align-middle">{item.approvedQty}</td>
+                    <td className="px-5 py-3 text-xs text-green-600 align-middle">
+                      {item.approvedQty}
+                    </td>
                   )}
-                  <td className="px-5 py-3 text-xs text-gray-900 align-middle">{item.batchNumber}</td>
-                  <td className="px-5 py-3 text-xs text-gray-900 align-middle">{item.expiryDate}</td>
+                  <td className="px-5 py-3 text-xs text-gray-900 align-middle">
+                    {item.batchNumber}
+                  </td>
+                  <td className="px-5 py-3 text-xs text-gray-900 align-middle">
+                    {item.expiryDate}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -371,15 +420,21 @@ function DepartmentRequestDetailsPage() {
       </div>
 
       {/* Comment Section - show for pending or active statuses */}
-      {request.status !== 'Completed' && (
+      {request.status !== "Completed" && (
         <div className="bg-white border border-gray-200 rounded-lg p-6">
           <h3 className="text-sm text-gray-900 mb-4">
-            {request.status === 'Pending Acceptance' ? 'Add Comment (Optional)' : 'Notes'}
+            {request.status === "Pending Acceptance"
+              ? "Add Comment (Optional)"
+              : "Notes"}
           </h3>
           <textarea
             value={comment}
             onChange={(e) => setComment(e.target.value)}
-            placeholder={request.status === 'Pending Acceptance' ? 'Enter acceptance or rejection comments...' : 'Add any notes...'}
+            placeholder={
+              request.status === "Pending Acceptance"
+                ? "Enter acceptance or rejection comments..."
+                : "Add any notes..."
+            }
             className="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
             rows={4}
           />

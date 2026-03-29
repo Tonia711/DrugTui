@@ -526,9 +526,8 @@ const ensureWorkflowFields = (request) => {
   };
 };
 
-export const departmentRequestDetails = baseDepartmentRequestDetails.map(
-  ensureWorkflowFields,
-);
+export const departmentRequestDetails =
+  baseDepartmentRequestDetails.map(ensureWorkflowFields);
 
 export const departmentRequestStatuses = [
   "Pending Acceptance",
@@ -544,11 +543,13 @@ export const departmentRequestById = Object.fromEntries(
   departmentRequestDetails.map((request) => [request.id, request]),
 );
 
-export const departmentRequestList = departmentRequestDetails.map((request) => ({
-  id: request.id,
-  department: request.department,
-  description: request.description,
-  requestedBy: request.requestedBy,
-  time: `${request.requestedDate} ${request.requestedTime}`,
-  status: request.status,
-}));
+export const departmentRequestList = departmentRequestDetails.map(
+  (request) => ({
+    id: request.id,
+    department: request.department,
+    description: request.description,
+    requestedBy: request.requestedBy,
+    time: `${request.requestedDate} ${request.requestedTime}`,
+    status: request.status,
+  }),
+);
