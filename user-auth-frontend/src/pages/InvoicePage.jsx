@@ -163,7 +163,7 @@ function InvoicePage() {
             <FileText size={20} className="text-blue-600" />
           </div>
         </button>
-        
+
         <button
           onClick={() => setSelectedStatus("Pending")}
           className={`bg-white border rounded-lg p-4 text-left transition-all ${
@@ -180,7 +180,7 @@ function InvoicePage() {
             <FileText size={20} className="text-yellow-600" />
           </div>
         </button>
-        
+
         <button
           onClick={() => setSelectedStatus("Discrepancy")}
           className={`bg-white border rounded-lg p-4 text-left transition-all ${
@@ -197,7 +197,7 @@ function InvoicePage() {
             <FileText size={20} className="text-red-600" />
           </div>
         </button>
-        
+
         <button
           onClick={() => setSelectedStatus("Completed")}
           className={`bg-white border rounded-lg p-4 text-left transition-all ${
@@ -308,7 +308,10 @@ function InvoicePage() {
                 </tr>
               ) : (
                 filteredInvoices.map((invoice) => (
-                  <tr key={invoice.id} className="hover:bg-gray-50 cursor-pointer transition-colors">
+                  <tr
+                    key={invoice.id}
+                    className="hover:bg-gray-50 cursor-pointer transition-colors"
+                  >
                     <td className="px-5 py-3 text-xs text-gray-900 align-middle">
                       {invoice.invoiceNumber}
                     </td>
@@ -358,7 +361,8 @@ function InvoicePage() {
 
             <div className="space-y-4">
               <p className="text-xs text-gray-600">
-                Select an invoice file to upload. Supported formats: PDF, JPG, PNG
+                Select an invoice file to upload. Supported formats: PDF, JPG,
+                PNG
               </p>
 
               {/* File Input */}

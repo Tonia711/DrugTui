@@ -316,7 +316,10 @@ function PurchaseOrderPage() {
                 </tr>
               ) : (
                 filteredOrders.map((order) => (
-                  <tr key={order.id} className="hover:bg-gray-50 cursor-pointer transition-colors">
+                  <tr
+                    key={order.id}
+                    className="hover:bg-gray-50 cursor-pointer transition-colors"
+                  >
                     <td className="px-5 py-3 text-xs text-gray-900 align-middle">
                       {order.id}
                     </td>
