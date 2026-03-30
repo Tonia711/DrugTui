@@ -441,6 +441,15 @@ function HomePage() {
     { month: "Jun", amount: 58000 },
   ];
 
+  const getAlertRoute = (page) => {
+    if (page === "inventory") return "/inventory";
+    if (page === "building") return "/storage-zone";
+    if (page === "receiving") return "/procurement/purchase-order";
+    if (page === "invoiceList") return "/procurement/invoice";
+    if (page === "dispensing") return "/department-request";
+    return null;
+  };
+
   return (
     <div className="p-8">
       <div className="flex items-center justify-between mb-6">
@@ -516,34 +525,36 @@ function HomePage() {
                   </div>
 
                   <div className="space-y-0">
-                    {module.alerts.map((alert) => (
-                      <button
-                        key={alert.id}
-                        onClick={() => {
-                          if (alert.page) {
-                            if (alert.page === "inventory") {
-                              navigate("/inventory");
+                    {module.alerts.map((alert) => {
+                      const route = getAlertRoute(alert.page);
+
+                      return (
+                        <button
+                          key={alert.id}
+                          onClick={() => {
+                            if (route) {
+                              navigate(route);
                             }
-                          }
-                        }}
-                        className={`w-full flex items-center gap-2 p-2 rounded transition-all text-left hover:bg-gray-50 ${
-                          alert.page ? "cursor-pointer" : "cursor-default"
-                        }`}
-                        disabled={!alert.page}
-                      >
-                        <AlertCircle
-                          className={`flex-shrink-0 ${
-                            alert.severity === "error"
-                              ? "text-rose-600"
-                              : "text-yellow-600"
+                          }}
+                          className={`w-full flex items-center gap-2 p-2 rounded transition-all text-left hover:bg-gray-50 ${
+                            route ? "cursor-pointer" : "cursor-default"
                           }`}
-                          size={14}
-                        />
-                        <p className="text-xs text-gray-900 flex-1">
-                          {alert.message}
-                        </p>
-                      </button>
-                    ))}
+                          disabled={!route}
+                        >
+                          <AlertCircle
+                            className={`flex-shrink-0 ${
+                              alert.severity === "error"
+                                ? "text-rose-600"
+                                : "text-yellow-600"
+                            }`}
+                            size={14}
+                          />
+                          <p className="text-xs text-gray-900 flex-1">
+                            {alert.message}
+                          </p>
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               );

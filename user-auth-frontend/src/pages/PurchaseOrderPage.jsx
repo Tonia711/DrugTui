@@ -1,5 +1,6 @@
 import { useMemo, useRef, useState, useEffect } from "react";
 import { ChevronDown, Package, Plus, Search } from "lucide-react";
+import StatusBadge from "../components/StatusBadge";
 
 const purchaseOrders = [
   {
@@ -99,43 +100,55 @@ function PurchaseOrderPage() {
       purchaseOrders.filter((order) => order.status === status).length;
 
     return [
-      { label: "Total Orders", value: purchaseOrders.length, status: null },
+      {
+        label: "Total Orders",
+        value: purchaseOrders.length,
+        status: null,
+        color: "text-blue-600",
+      },
       {
         label: "Pending Review",
         value: countByStatus("Pending Review"),
         status: "Pending Review",
+        color: "text-amber-700",
       },
       {
         label: "Rejected",
         value: countByStatus("Rejected"),
         status: "Rejected",
         highlight: true,
+        color: "text-red-700",
       },
       {
         label: "Approved/Ordered",
         value: countByStatus("Approved/Ordered"),
         status: "Approved/Ordered",
+        color: "text-blue-700",
       },
       {
         label: "Partially Received",
         value: countByStatus("Partially Received"),
         status: "Partially Received",
+        color: "text-amber-700",
       },
       {
         label: "Fully Received",
         value: countByStatus("Fully Received"),
         status: "Fully Received",
+        color: "text-blue-700",
       },
       {
         label: "Invoice Matched",
         value: countByStatus("Invoice Matched"),
         status: "Invoice Matched",
+        color: "text-blue-700",
       },
       {
         label: "Invoice Mismatched",
         value: countByStatus("Invoice Mismatched"),
         status: "Invoice Mismatched",
         highlight: true,
+        color: "text-red-700",
       },
     ];
   }, []);
@@ -190,7 +203,7 @@ function PurchaseOrderPage() {
         </button>
       </div>
 
-      <div className="mb-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+      <div className="mb-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4">
         {stats.map((stat) => {
           const isActive =
             (stat.status === null && selectedStatus === null) ||
@@ -205,12 +218,12 @@ function PurchaseOrderPage() {
                 isActive
                   ? "border-blue-500 ring-2 ring-blue-200"
                   : stat.highlight
-                    ? "border-red-300 bg-red-50 hover:border-red-400"
+                    ? "border-red-300 bg-red-50"
                     : "border-gray-200 hover:border-gray-300"
               }`}
             >
               <div className="text-[10px] text-gray-600 mb-1">{stat.label}</div>
-              <div className="text-sm text-gray-900">{stat.value}</div>
+              <div className={`text-sm ${stat.color}`}>{stat.value}</div>
             </button>
           );
         })}
@@ -218,7 +231,7 @@ function PurchaseOrderPage() {
 
       <div className="bg-white border border-gray-200 rounded-lg">
         <div className="p-5 border-b border-gray-200">
-          <h2 className="text-sm text-gray-900 mb-3">Purchase Orders</h2>
+          <h2 className="text-sm text-gray-900 mb-3">Order List</h2>
           <div className="flex items-center gap-3">
             <div className="flex-1 relative">
               <Search
@@ -227,7 +240,7 @@ function PurchaseOrderPage() {
               />
               <input
                 type="text"
-                placeholder="Search by order ID, supplier, or description..."
+                placeholder="Search by Order ID, Description, or Supplier..."
                 className="w-full pl-9 pr-3 py-1.5 border border-gray-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-gray-200"
                 value={keyword}
                 onChange={(event) => setKeyword(event.target.value)}
@@ -245,21 +258,19 @@ function PurchaseOrderPage() {
               </button>
 
               {showStatusDropdown && (
-                <div className="absolute right-0 mt-1 w-44 bg-white border border-gray-300 rounded-lg shadow-lg z-10 py-1">
-                  {statusOptions.map((status) => {
+                <div className="absolute right-0 mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
+                  {statusOptions.map((status, index) => {
                     const isAll = status === "All Status";
-                    const isActive =
-                      (isAll && !selectedStatus) || selectedStatus === status;
+                    const isFirst = index === 0;
+                    const isLast = index === statusOptions.length - 1;
 
                     return (
                       <button
                         key={status}
                         type="button"
-                        className={`w-full px-3 py-1.5 text-left text-xs transition-colors ${
-                          isActive
-                            ? "bg-gray-100 text-gray-900"
-                            : "text-gray-700 hover:bg-gray-50"
-                        }`}
+                        className={`w-full px-3 py-2 text-left text-xs text-gray-700 hover:bg-gray-50 ${
+                          isFirst ? "first:rounded-t-lg" : ""
+                        } ${isLast ? "last:rounded-b-lg" : ""}`}
                         onClick={() => {
                           setSelectedStatus(isAll ? null : status);
                           setShowStatusDropdown(false);
@@ -289,7 +300,7 @@ function PurchaseOrderPage() {
                   Supplier
                 </th>
                 <th className="px-5 py-2.5 text-left text-xs text-gray-600">
-                  Order Time
+                  Time
                 </th>
                 <th className="px-5 py-2.5 text-left text-xs text-gray-600">
                   Status
@@ -305,27 +316,25 @@ function PurchaseOrderPage() {
                 </tr>
               ) : (
                 filteredOrders.map((order) => (
-                  <tr key={order.id} className="hover:bg-gray-50">
-                    <td className="px-5 py-3 text-xs text-gray-900 font-medium">
+                  <tr key={order.id} className="hover:bg-gray-50 cursor-pointer transition-colors">
+                    <td className="px-5 py-3 text-xs text-gray-900 align-middle">
                       {order.id}
                     </td>
-                    <td className="px-5 py-3 text-xs text-gray-700">
+                    <td className="px-5 py-3 text-xs text-gray-900 align-middle">
                       {order.description}
                     </td>
-                    <td className="px-5 py-3 text-xs text-gray-700">
+                    <td className="px-5 py-3 text-xs text-gray-900 align-middle">
                       {order.supplier}
                     </td>
-                    <td className="px-5 py-3 text-xs text-gray-700">
+                    <td className="px-5 py-3 text-xs text-gray-900 align-middle">
                       {order.time}
                     </td>
-                    <td className="px-5 py-3">
-                      <span
-                        className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${getStatusClassName(
-                          order.status,
-                        )}`}
-                      >
-                        {order.status}
-                      </span>
+                    <td className="px-5 py-3 align-middle">
+                      <StatusBadge
+                        label={order.status}
+                        toneClass={getStatusClassName(order.status)}
+                        widthClass="min-w-[140px]"
+                      />
                     </td>
                   </tr>
                 ))
