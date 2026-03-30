@@ -10,6 +10,9 @@ import PurchaseOrderPage from "./pages/PurchaseOrderPage";
 import InvoicePage from "./pages/InvoicePage";
 import DepartmentRequestPage from "./pages/DepartmentRequestPage";
 import DepartmentRequestDetailsPage from "./pages/DepartmentRequestDetailsPage";
+import StorageZonePage from "./pages/StorageZonePage";
+import ReportsPage from "./pages/ReportsPage";
+import SettingsPage from "./pages/SettingsPage";
 import MePage from "./pages/MePage";
 import PlaceholderPage from "./pages/PlaceholderPage";
 
@@ -41,33 +44,9 @@ function App() {
           path="department-request/:requestId"
           element={<DepartmentRequestDetailsPage />}
         />
-        <Route
-          path="storage-zone"
-          element={
-            <PlaceholderPage
-              title="Storage Zone"
-              subtitle="Storage zone management page."
-            />
-          }
-        />
-        <Route
-          path="reports"
-          element={
-            <PlaceholderPage
-              title="Reports"
-              subtitle="Reporting and analytics page."
-            />
-          }
-        />
-        <Route
-          path="settings"
-          element={
-            <PlaceholderPage
-              title="Settings"
-              subtitle="System settings page."
-            />
-          }
-        />
+        <Route path="storage-zone" element={<StorageZonePage />} />
+        <Route path="reports" element={<ReportsPage />} />
+        <Route path="settings" element={<SettingsPage />} />
         <Route path="account" element={<MePage />} />
         <Route path="me" element={<Navigate to="/account" replace />} />
       </Route>
