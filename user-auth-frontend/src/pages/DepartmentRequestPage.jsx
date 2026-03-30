@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ChevronDown, PackageOpen, Plus, Search } from "lucide-react";
+import StatusBadge from "../components/StatusBadge";
 import {
   departmentRequestList,
   departmentRequestStatuses,
@@ -265,13 +266,13 @@ function DepartmentRequestPage() {
                       {row.time}
                     </td>
                     <td className="px-5 py-3 text-xs">
-                      <span
-                        className={`inline-flex w-40 min-h-7 items-center justify-center rounded-md px-3 py-1 text-xs whitespace-nowrap ${getStatusClassName(
-                          row.status,
-                        )}`}
-                      >
-                        {row.status}
-                      </span>
+                      <StatusBadge
+                        label={row.status}
+                        toneClass={getStatusClassName(row.status)}
+                        widthClass="w-40"
+                        paddingClass="px-3 py-1"
+                        className="min-h-7 rounded-md"
+                      />
                     </td>
                   </tr>
                 ))

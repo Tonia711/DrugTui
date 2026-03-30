@@ -9,7 +9,7 @@ export const inventoryData = [
     storage: "Ambient",
     location: "A-1-001",
     status: "In Stock",
-    statusColor: "bg-gray-100 text-gray-700",
+    statusColor: "bg-green-100 text-green-700",
   },
   {
     id: 2,
@@ -33,7 +33,7 @@ export const inventoryData = [
     storage: "Ambient",
     location: "A-3-045",
     status: "In Stock",
-    statusColor: "bg-gray-100 text-gray-700",
+    statusColor: "bg-green-100 text-green-700",
   },
   {
     id: 4,
@@ -81,7 +81,7 @@ export const inventoryData = [
     storage: "Ambient",
     location: "A-2-033",
     status: "In Stock",
-    statusColor: "bg-gray-100 text-gray-700",
+    statusColor: "bg-green-100 text-green-700",
   },
   {
     id: 8,
@@ -117,7 +117,7 @@ export const inventoryData = [
     storage: "Ambient",
     location: "A-2-028",
     status: "In Stock",
-    statusColor: "bg-gray-100 text-gray-700",
+    statusColor: "bg-green-100 text-green-700",
   },
   {
     id: 11,
@@ -165,7 +165,7 @@ export const inventoryData = [
     storage: "Frozen",
     location: "F-1-002",
     status: "In Stock",
-    statusColor: "bg-gray-100 text-gray-700",
+    statusColor: "bg-green-100 text-green-700",
   },
   {
     id: 15,
@@ -177,7 +177,7 @@ export const inventoryData = [
     storage: "Cold Storage",
     location: "B-1-012",
     status: "In Stock",
-    statusColor: "bg-gray-100 text-gray-700",
+    statusColor: "bg-green-100 text-green-700",
   },
   {
     id: 16,
@@ -201,7 +201,7 @@ export const inventoryData = [
     storage: "Cold Storage",
     location: "B-2-019",
     status: "In Stock",
-    statusColor: "bg-gray-100 text-gray-700",
+    statusColor: "bg-green-100 text-green-700",
   },
   {
     id: 18,

@@ -12,6 +12,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { inventoryData as designInventoryData } from "../data/inventoryData";
+import StatusBadge from "../components/StatusBadge";
 
 const initialCreateForm = {
   name: "",
@@ -83,7 +84,7 @@ function InventoryPage() {
       const statusColor =
         status === "Low stock"
           ? "bg-black text-white"
-          : "bg-gray-100 text-gray-700";
+          : "bg-green-100 text-green-700";
 
       setMedicines((prev) => [
         {
@@ -543,11 +544,11 @@ function InventoryPage() {
                       {item.location}
                     </td>
                     <td className="px-5 py-3 text-xs">
-                      <span
-                        className={`inline-flex items-center justify-center px-2 py-0.5 rounded text-xs w-20 ${item.statusColor}`}
-                      >
-                        {item.status}
-                      </span>
+                      <StatusBadge
+                        label={item.status}
+                        toneClass={item.statusColor}
+                        widthClass="w-20"
+                      />
                     </td>
                   </tr>
                 ))

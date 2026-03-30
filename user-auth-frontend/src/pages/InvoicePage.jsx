@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronDown, FileText, Search, Upload, X } from "lucide-react";
+import StatusBadge from "../components/StatusBadge";
 
 const invoicesData = [
   {
@@ -111,13 +112,10 @@ function InvoicePage() {
   }, [keyword, selectedStatus]);
 
   const getStatusClassName = (status) => {
-    if (status === "Completed")
-      return "bg-green-50 text-green-700 border-green-200";
-    if (status === "Pending")
-      return "bg-yellow-50 text-yellow-700 border-yellow-200";
-    if (status === "Discrepancy")
-      return "bg-red-50 text-red-700 border-red-200";
-    return "bg-gray-50 text-gray-700 border-gray-200";
+    if (status === "Pending") return "bg-amber-100 text-amber-700";
+    if (status === "Discrepancy") return "bg-red-100 text-red-700";
+    if (status === "Completed") return "bg-blue-100 text-blue-700";
+    return "bg-gray-100 text-gray-700";
   };
 
   const handleFileSelect = (event) => {
@@ -148,30 +146,74 @@ function InvoicePage() {
         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
-        {stats.map((stat) => {
-          const isActive =
-            (stat.status === null && selectedStatus === null) ||
-            stat.status === selectedStatus;
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
+        <button
+          onClick={() => setSelectedStatus(null)}
+          className={`bg-white border rounded-lg p-4 text-left transition-all ${
+            selectedStatus === null
+              ? "border-blue-500 ring-2 ring-blue-200"
+              : "border-gray-200 hover:border-gray-300"
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-[10px] text-gray-500">Total Invoices</p>
+              <p className="text-blue-600 mt-1">{stats[0].value}</p>
+            </div>
+            <FileText size={20} className="text-blue-600" />
+          </div>
+        </button>
 
-          return (
-            <button
-              key={stat.label}
-              type="button"
-              onClick={() => setSelectedStatus(stat.status)}
-              className={`bg-white border rounded-lg p-4 text-left transition-all ${
-                isActive
-                  ? "border-blue-500 ring-2 ring-blue-200"
-                  : stat.highlight
-                    ? "border-red-300 bg-red-50 hover:border-red-400"
-                    : "border-gray-200 hover:border-gray-300"
-              }`}
-            >
-              <div className="text-[10px] text-gray-600 mb-1">{stat.label}</div>
-              <div className="text-sm text-gray-900">{stat.value}</div>
-            </button>
-          );
-        })}
+        <button
+          onClick={() => setSelectedStatus("Pending")}
+          className={`bg-white border rounded-lg p-4 text-left transition-all ${
+            selectedStatus === "Pending"
+              ? "border-blue-500 ring-2 ring-blue-200"
+              : "border-gray-200 hover:border-gray-300"
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-[10px] text-gray-500">Pending</p>
+              <p className="text-yellow-600 mt-1">{stats[1].value}</p>
+            </div>
+            <FileText size={20} className="text-yellow-600" />
+          </div>
+        </button>
+
+        <button
+          onClick={() => setSelectedStatus("Discrepancy")}
+          className={`bg-white border rounded-lg p-4 text-left transition-all ${
+            selectedStatus === "Discrepancy"
+              ? "border-blue-500 ring-2 ring-blue-200"
+              : "border-red-300 bg-red-50"
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-[10px] text-gray-500">Discrepancy</p>
+              <p className="text-red-600 mt-1">{stats[2].value}</p>
+            </div>
+            <FileText size={20} className="text-red-600" />
+          </div>
+        </button>
+
+        <button
+          onClick={() => setSelectedStatus("Completed")}
+          className={`bg-white border rounded-lg p-4 text-left transition-all ${
+            selectedStatus === "Completed"
+              ? "border-blue-500 ring-2 ring-blue-200"
+              : "border-gray-200 hover:border-gray-300"
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-[10px] text-gray-500">Completed</p>
+              <p className="text-green-600 mt-1">{stats[3].value}</p>
+            </div>
+            <FileText size={20} className="text-green-600" />
+          </div>
+        </button>
       </div>
 
       <div className="bg-white border border-gray-200 rounded-lg">
@@ -237,22 +279,22 @@ function InvoicePage() {
           <table className="w-full">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
-                <th className="px-5 py-2.5 text-left text-xs text-gray-600">
-                  Invoice #
+                <th className="px-5 py-2.5 text-left text-[10px] text-gray-600">
+                  Invoice No.
                 </th>
-                <th className="px-5 py-2.5 text-left text-xs text-gray-600">
+                <th className="px-5 py-2.5 text-left text-[10px] text-gray-600">
                   Supplier
                 </th>
-                <th className="px-5 py-2.5 text-left text-xs text-gray-600">
+                <th className="px-5 py-2.5 text-left text-[10px] text-gray-600">
+                  PO Number
+                </th>
+                <th className="px-5 py-2.5 text-left text-[10px] text-gray-600">
                   Date
                 </th>
-                <th className="px-5 py-2.5 text-left text-xs text-gray-600">
+                <th className="px-5 py-2.5 text-left text-[10px] text-gray-600">
                   Amount
                 </th>
-                <th className="px-5 py-2.5 text-left text-xs text-gray-600">
-                  PO #
-                </th>
-                <th className="px-5 py-2.5 text-left text-xs text-gray-600">
+                <th className="px-5 py-2.5 text-left text-[10px] text-gray-600">
                   Status
                 </th>
               </tr>
@@ -266,30 +308,32 @@ function InvoicePage() {
                 </tr>
               ) : (
                 filteredInvoices.map((invoice) => (
-                  <tr key={invoice.id} className="hover:bg-gray-50">
-                    <td className="px-5 py-3 text-xs text-gray-900 font-medium">
+                  <tr
+                    key={invoice.id}
+                    className="hover:bg-gray-50 cursor-pointer transition-colors"
+                  >
+                    <td className="px-5 py-3 text-xs text-gray-900 align-middle">
                       {invoice.invoiceNumber}
                     </td>
-                    <td className="px-5 py-3 text-xs text-gray-700">
+                    <td className="px-5 py-3 text-xs text-gray-900 align-middle">
                       {invoice.supplier}
                     </td>
-                    <td className="px-5 py-3 text-xs text-gray-700">
-                      {invoice.date}
-                    </td>
-                    <td className="px-5 py-3 text-xs text-gray-700">
-                      ${invoice.amount}
-                    </td>
-                    <td className="px-5 py-3 text-xs text-gray-700">
+                    <td className="px-5 py-3 text-xs text-gray-900 align-middle">
                       {invoice.poNumber}
                     </td>
-                    <td className="px-5 py-3 text-xs">
-                      <span
-                        className={`inline-flex border px-2 py-0.5 rounded-full text-xs font-medium ${getStatusClassName(
-                          invoice.status,
-                        )}`}
-                      >
-                        {invoice.status}
-                      </span>
+                    <td className="px-5 py-3 text-xs text-gray-900 align-middle">
+                      {invoice.date}
+                    </td>
+                    <td className="px-5 py-3 text-xs text-gray-900 align-middle">
+                      ${invoice.amount}
+                    </td>
+                    <td className="px-5 py-3 align-middle">
+                      <StatusBadge
+                        label={invoice.status}
+                        toneClass={getStatusClassName(invoice.status)}
+                        widthClass="min-w-[140px]"
+                        textClass="text-xs"
+                      />
                     </td>
                   </tr>
                 ))
@@ -300,63 +344,73 @@ function InvoicePage() {
       </div>
 
       {showUploadModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-lg border border-gray-200">
-            <div className="p-5 border-b border-gray-200 flex items-center justify-between">
-              <div>
-                <h3 className="text-sm text-gray-900">Upload Invoice</h3>
-                <p className="text-xs text-gray-500 mt-1">
-                  Select an invoice file to start verification.
-                </p>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="text-sm text-gray-900">Upload Invoice</h2>
+              <button
+                onClick={() => {
+                  setShowUploadModal(false);
+                  setSelectedFile(null);
+                }}
+                className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <p className="text-xs text-gray-600">
+                Select an invoice file to upload. Supported formats: PDF, JPG,
+                PNG
+              </p>
+
+              {/* File Input */}
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-blue-400 transition-colors">
+                <input
+                  type="file"
+                  id="invoice-file"
+                  className="hidden"
+                  accept=".pdf,.jpg,.jpeg,.png"
+                  onChange={handleFileSelect}
+                />
+                <label
+                  htmlFor="invoice-file"
+                  className="cursor-pointer flex flex-col items-center gap-2"
+                >
+                  <Upload size={32} className="text-gray-400" />
+                  <span className="text-xs text-gray-700">
+                    {selectedFile ? selectedFile.name : "Click to select file"}
+                  </span>
+                  <span className="text-[10px] text-gray-500">
+                    PDF, JPG, PNG up to 10MB
+                  </span>
+                </label>
               </div>
-              <button
-                type="button"
-                onClick={() => {
-                  setShowUploadModal(false);
-                  setSelectedFile(null);
-                }}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <X size={18} />
-              </button>
-            </div>
 
-            <div className="p-5">
-              <label className="block text-xs text-gray-600 mb-2">
-                Invoice File
-              </label>
-              <input
-                type="file"
-                accept=".pdf,.jpg,.jpeg,.png,.csv"
-                onChange={handleFileSelect}
-                className="w-full text-xs border border-gray-300 rounded-lg p-2"
-              />
-              {selectedFile && (
-                <p className="text-xs text-gray-600 mt-2">
-                  Selected: {selectedFile.name}
-                </p>
-              )}
-            </div>
-
-            <div className="p-5 border-t border-gray-200 flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setShowUploadModal(false);
-                  setSelectedFile(null);
-                }}
-                className="px-3 py-1.5 text-xs text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleUpload}
-                disabled={!selectedFile}
-                className="px-3 py-1.5 text-xs bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
-              >
-                Upload
-              </button>
+              {/* Upload Button */}
+              <div className="flex gap-2">
+                <button
+                  onClick={() => {
+                    setShowUploadModal(false);
+                    setSelectedFile(null);
+                  }}
+                  className="flex-1 px-4 py-2 text-xs bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleUpload}
+                  disabled={!selectedFile}
+                  className={`flex-1 px-4 py-2 text-xs rounded-lg transition-colors ${
+                    selectedFile
+                      ? "bg-blue-600 text-white hover:bg-blue-700"
+                      : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                  }`}
+                >
+                  Upload & Check
+                </button>
+              </div>
             </div>
           </div>
         </div>
