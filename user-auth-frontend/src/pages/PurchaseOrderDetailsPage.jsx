@@ -24,6 +24,9 @@ const formatDateTime = (value) => {
 };
 
 const getStatusClassName = (status) => {
+  if (status === "Invoice Matched") {
+    return "bg-green-100 text-green-700";
+  }
   if (status === "Rejected" || status === "Invoice Mismatched") {
     return "bg-red-100 text-red-700";
   }
@@ -94,11 +97,8 @@ function PurchaseOrderDetailsPage() {
       "Invoice Matched",
       "Invoice Mismatched",
     ];
-    const completedStatuses = [
-      "Invoice Matched",
-      "Invoice Mismatched",
-      "Fully Received",
-    ];
+    const completedStatuses = ["Invoice Matched"];
+    const completedInProgressStatuses = ["Invoice Mismatched"];
 
     const approvedFinished =
       approvedStatuses.includes(status) || status === "Rejected";
@@ -135,10 +135,7 @@ function PurchaseOrderDetailsPage() {
       {
         id: "completed",
         label: "Completed",
-        status: makeState(
-          completedFinished,
-          receivedFinished && !completedFinished,
-        ),
+        status: makeState(completedFinished, completedInProgressStatuses.includes(status)),
       },
     ];
   }, [order]);
@@ -166,31 +163,93 @@ function PurchaseOrderDetailsPage() {
       name: item.description,
       quantity: item.quantityOrdered,
       unit: item.unit,
+      receivedQuantity: item.quantityReceived,
     }));
   }, [order]);
 
+  const orderedItems = useMemo(
+    () => orderItems.filter((item) => item.quantity > 0),
+    [orderItems],
+  );
+
+  const receivedItems = useMemo(
+    () =>
+      orderItems
+        .filter((item) => item.receivedQuantity > 0)
+        .map((item) => ({
+          name: item.name,
+          quantity: item.receivedQuantity,
+        })),
+    [orderItems],
+  );
+
+  const orderComparisons = useMemo(
+    () =>
+      orderedItems.map((orderedItem) => {
+        const receipt = receivedItems.find((item) => item.name === orderedItem.name);
+
+        if (!receipt) {
+          return {
+            name: orderedItem.name,
+            orderedQty: orderedItem.quantity,
+            receivedQty: 0,
+            status: "not-received",
+          };
+        }
+
+        if (receipt.quantity < orderedItem.quantity) {
+          return {
+            name: orderedItem.name,
+            orderedQty: orderedItem.quantity,
+            receivedQty: receipt.quantity,
+            status: "shortage",
+          };
+        }
+
+        return {
+          name: orderedItem.name,
+          orderedQty: orderedItem.quantity,
+          receivedQty: receipt.quantity,
+          status: "match",
+        };
+      }),
+    [orderedItems, receivedItems],
+  );
+
+  const extraReceiptItems = useMemo(
+    () =>
+      receivedItems.filter(
+        (receivedItem) =>
+          !orderedItems.find((orderedItem) => orderedItem.name === receivedItem.name),
+      ),
+    [orderedItems, receivedItems],
+  );
+
+  const sortedOrderComparisons = useMemo(() => {
+    return [...orderComparisons].sort((a, b) => {
+      if (a.status !== "match" && b.status === "match") return -1;
+      if (a.status === "match" && b.status !== "match") return 1;
+      return 0;
+    });
+  }, [orderComparisons]);
+
+  const sortedReceiptItems = useMemo(
+    () =>
+      sortedOrderComparisons.map((comparison) =>
+        receivedItems.find((item) => item.name === comparison.name),
+      ),
+    [receivedItems, sortedOrderComparisons],
+  );
+
   const orderDescription = useMemo(() => {
-    if (!orderItems.length) {
+    if (!orderedItems.length) {
       return order?.notes || `Total ${order?.itemCount || 0} item(s)`;
     }
 
-    const firstItem = orderItems[0];
+    const firstItem = orderedItems[0];
     const unitLabel = firstItem.unit || "units";
     return `${firstItem.name} - ${firstItem.quantity} ${unitLabel}`;
-  }, [order?.itemCount, order?.notes, orderItems]);
-
-  const receiptItems = useMemo(() => {
-    if (!order) {
-      return [];
-    }
-
-    return (order.items || [])
-      .filter((item) => item.quantityReceived > 0)
-      .map((item) => ({
-        name: item.description,
-        quantity: item.quantityReceived,
-      }));
-  }, [order]);
+  }, [order?.itemCount, order?.notes, orderedItems]);
 
   return (
     <div className="p-8">
@@ -320,7 +379,7 @@ function PurchaseOrderDetailsPage() {
                 Order Items
               </h2>
               <div className="space-y-2">
-                {orderItems.map((item, index) => (
+                {sortedOrderComparisons.map((item, index) => (
                   <div
                     key={`${item.name}-${index}`}
                     className="p-4 rounded-lg border-2 border-gray-200 bg-white min-h-[88px] flex items-center"
@@ -333,7 +392,24 @@ function PurchaseOrderDetailsPage() {
                       </div>
                       <div className="flex justify-between text-xs text-gray-700">
                         <span>Ordered Qty:</span>
-                        <span>{item.quantity}</span>
+                        <span>{item.orderedQty}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+
+                {extraReceiptItems.map((item, index) => (
+                  <div
+                    key={`placeholder-${item.name}-${index}`}
+                    className="p-4 rounded-lg border-2 border-gray-200 bg-white min-h-[88px] flex items-center"
+                  >
+                    <div className="flex-1">
+                      <div className="mb-2">
+                        <span className="text-xs text-gray-500 italic">Not in order</span>
+                      </div>
+                      <div className="flex justify-between text-xs text-gray-500">
+                        <span>Ordered Qty:</span>
+                        <span>0</span>
                       </div>
                     </div>
                   </div>
@@ -346,17 +422,40 @@ function PurchaseOrderDetailsPage() {
                 <Package size={20} />
                 Received Items
               </h2>
-              {!receiptItems.length ? (
+              {!receivedItems.length ? (
                 <div className="text-center py-12 text-gray-500">
                   <Package size={48} className="mx-auto mb-3 opacity-30" />
                   <p className="text-xs">No receipt available yet</p>
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {receiptItems.map((item, index) => {
-                    const orderedQty = orderItems[index]?.quantity || 0;
-                    const isMatch = item.quantity === orderedQty;
-                    const isShort = item.quantity < orderedQty;
+                  {sortedReceiptItems.map((item, index) => {
+                    const comparison = sortedOrderComparisons[index];
+
+                    if (!item) {
+                      return (
+                        <div
+                          key={`not-received-${comparison.name}-${index}`}
+                          className="p-4 rounded-lg border-2 border-gray-300 bg-gray-50 transition-colors min-h-[88px] flex items-center"
+                        >
+                          <div className="flex-1">
+                            <div className="flex items-start justify-between mb-2">
+                              <div className="flex items-center gap-2 flex-1">
+                                <span className="text-xs text-gray-500">{comparison.name}</span>
+                                <span className="text-xs text-gray-600">Not received</span>
+                              </div>
+                              <XCircle className="text-gray-400 flex-shrink-0" size={20} />
+                            </div>
+                            <div className="flex justify-between text-xs text-gray-500">
+                              <span>Received Qty:</span>
+                              <span>0</span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    }
+
+                    const isMatch = item.quantity === comparison.orderedQty;
 
                     return (
                       <div
@@ -373,9 +472,9 @@ function PurchaseOrderDetailsPage() {
                               <span className="text-xs text-gray-900">
                                 {item.name}
                               </span>
-                              {!isMatch && isShort && (
+                              {!isMatch && (
                                 <span className="text-xs text-red-700">
-                                  Short {orderedQty - item.quantity} units
+                                  Short {comparison.orderedQty - item.quantity} units
                                 </span>
                               )}
                             </div>
@@ -399,6 +498,27 @@ function PurchaseOrderDetailsPage() {
                       </div>
                     );
                   })}
+
+                  {extraReceiptItems.map((item, index) => (
+                    <div
+                      key={`extra-receipt-${item.name}-${index}`}
+                      className="p-4 rounded-lg border-2 border-orange-300 bg-orange-50 transition-colors min-h-[88px] flex items-center"
+                    >
+                      <div className="flex-1">
+                        <div className="flex items-start justify-between mb-2">
+                          <div className="flex items-center gap-2 flex-1">
+                            <span className="text-xs text-gray-900">{item.name}</span>
+                            <span className="text-xs text-orange-700">Not in order</span>
+                          </div>
+                          <XCircle className="text-orange-500 flex-shrink-0" size={20} />
+                        </div>
+                        <div className="flex justify-between text-xs text-gray-700">
+                          <span>Received Qty:</span>
+                          <span>{item.quantity}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>

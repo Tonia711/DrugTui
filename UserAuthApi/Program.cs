@@ -359,6 +359,231 @@ using (var scope = app.Services.CreateScope())
         db.SaveChanges();
     }
 
+    static bool HasSameItems(ICollection<PurchaseOrderItem> current, (string Description, int Ordered, int Received)[] expected)
+    {
+        if (current.Count != expected.Length)
+        {
+            return false;
+        }
+
+        var currentOrdered = current
+            .Select(i => (i.Description, i.QuantityOrdered, i.QuantityReceived))
+            .OrderBy(i => i.Description)
+            .ThenBy(i => i.QuantityOrdered)
+            .ThenBy(i => i.QuantityReceived)
+            .ToArray();
+
+        var expectedOrdered = expected
+            .OrderBy(i => i.Description)
+            .ThenBy(i => i.Ordered)
+            .ThenBy(i => i.Received)
+            .ToArray();
+
+        for (var index = 0; index < currentOrdered.Length; index++)
+        {
+            var currentItem = currentOrdered[index];
+            var expectedItem = expectedOrdered[index];
+
+            if (currentItem.Description != expectedItem.Description ||
+                currentItem.QuantityOrdered != expectedItem.Ordered ||
+                currentItem.QuantityReceived != expectedItem.Received)
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    var supplierIdLookup = db.Suppliers.ToDictionary(s => s.Name, s => s.Id);
+    var defaultCreatorId = db.Users.OrderBy(u => u.Id).Select(u => (int?)u.Id).FirstOrDefault();
+
+    var orderRefreshSpecs = new[]
+    {
+        new
+        {
+            OrderNumber = "ORD-001",
+            SupplierName = "PharmaCorp Ltd",
+            Status = "Pending Review",
+            OrderDate = "2025-11-25 09:30",
+            Items = new (string, int, int)[]
+            {
+                ("Amoxicillin 500mg Tablets", 1000, 0),
+                ("Paracetamol 500mg Tablets", 2000, 0),
+                ("Ibuprofen 400mg Tablets", 800, 0),
+                ("Aspirin 100mg Tablets", 1500, 0),
+                ("Metformin 850mg Tablets", 500, 0),
+                ("Atorvastatin 40mg Tablets", 600, 0),
+                ("Lisinopril 10mg Tablets", 400, 0),
+                ("Omeprazole 20mg Capsules", 750, 0),
+                ("Losartan 50mg Tablets", 550, 0),
+                ("Amlodipine 5mg Tablets", 650, 0),
+                ("Gabapentin 300mg Capsules", 300, 0),
+                ("Sertraline 50mg Tablets", 450, 0),
+                ("Levothyroxine 100mcg Tablets", 700, 0),
+                ("Albuterol Inhaler", 100, 0),
+                ("Ciprofloxacin 500mg Tablets", 400, 0),
+            }
+        },
+        new
+        {
+            OrderNumber = "ORD-002",
+            SupplierName = "MediSupply Inc",
+            Status = "Fully Received",
+            OrderDate = "2025-11-24 14:20",
+            Items = new (string, int, int)[]
+            {
+                ("Amoxicillin Capsules", 100, 90),
+                ("Cold Relief Granules", 120, 100),
+                ("Vitamin C Tablets", 200, 0),
+                ("Ibuprofen Tablets", 50, 50),
+                ("Cefixime Capsules", 80, 80),
+                ("Aspirin Tablets", 0, 60),
+            }
+        },
+        new
+        {
+            OrderNumber = "ORD-003",
+            SupplierName = "HealthPro Distributors",
+            Status = "Invoice Matched",
+            OrderDate = "2025-11-24 11:15",
+            Items = new (string, int, int)[]
+            {
+                ("Insulin Glargine 100uL/mL", 50, 50),
+                ("Insulin Syringes", 100, 100),
+            }
+        },
+        new
+        {
+            OrderNumber = "ORD-004",
+            SupplierName = "PharmaCorp Ltd",
+            Status = "Invoice Matched",
+            OrderDate = "2025-11-23 16:45",
+            Items = new (string, int, int)[]
+            {
+                ("Metformin 850mg Tablets", 2000, 2000),
+                ("Metformin 500mg Tablets", 800, 800),
+            }
+        },
+        new
+        {
+            OrderNumber = "ORD-005",
+            SupplierName = "GlobalMed Supply",
+            Status = "Approved/Ordered",
+            OrderDate = "2025-11-23 10:00",
+            Items = new (string, int, int)[]
+            {
+                ("Lisinopril 10mg Tablets", 1500, 0),
+                ("Lisinopril 20mg Tablets", 400, 0),
+            }
+        },
+        new
+        {
+            OrderNumber = "ORD-006",
+            SupplierName = "MediSupply Inc",
+            Status = "Invoice Mismatched",
+            OrderDate = "2025-11-22 13:30",
+            Items = new (string, int, int)[]
+            {
+                ("Omeprazole 20mg Capsules", 3000, 2800),
+                ("Omeprazole 40mg Capsules", 600, 600),
+                ("Pantoprazole 40mg Tablets", 0, 150),
+            }
+        },
+        new
+        {
+            OrderNumber = "ORD-007",
+            SupplierName = "HealthPro Distributors",
+            Status = "Invoice Matched",
+            OrderDate = "2025-11-22 09:15",
+            Items = new (string, int, int)[]
+            {
+                ("Atorvastatin 40mg Tablets", 2500, 2500),
+                ("Atorvastatin 20mg Tablets", 600, 600),
+            }
+        },
+        new
+        {
+            OrderNumber = "ORD-008",
+            SupplierName = "PharmaCorp Ltd",
+            Status = "Rejected",
+            OrderDate = "2025-11-21 15:20",
+            Items = new (string, int, int)[]
+            {
+                ("Levothyroxine 50mcg Tablets", 1000, 0),
+            }
+        },
+        new
+        {
+            OrderNumber = "ORD-009",
+            SupplierName = "GlobalMed Supply",
+            Status = "Invoice Matched",
+            OrderDate = "2025-11-21 11:45",
+            Items = new (string, int, int)[]
+            {
+                ("Amlodipine 5mg Tablets", 2000, 2000),
+                ("Amlodipine 10mg Tablets", 600, 600),
+            }
+        },
+        new
+        {
+            OrderNumber = "ORD-010",
+            SupplierName = "MediSupply Inc",
+            Status = "Partially Received",
+            OrderDate = "2025-11-20 14:00",
+            Items = new (string, int, int)[]
+            {
+                ("Gabapentin 300mg Capsules", 1200, 900),
+                ("Gabapentin 100mg Capsules", 500, 300),
+            }
+        },
+    };
+
+    foreach (var spec in orderRefreshSpecs)
+    {
+        if (!supplierIdLookup.TryGetValue(spec.SupplierName, out var supplierId))
+        {
+            continue;
+        }
+
+        var existingOrder = db.PurchaseOrders
+            .Include(po => po.Items)
+            .FirstOrDefault(po => po.OrderNumber == spec.OrderNumber);
+
+        if (existingOrder == null)
+        {
+            existingOrder = new PurchaseOrder
+            {
+                OrderNumber = spec.OrderNumber,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            db.PurchaseOrders.Add(existingOrder);
+        }
+
+        existingOrder.SupplierId = supplierId;
+        existingOrder.CreatedByUserId = defaultCreatorId;
+        existingOrder.Status = spec.Status;
+        existingOrder.OrderDate = ParseUtc(spec.OrderDate, DateTime.UtcNow);
+        existingOrder.Notes = "Seeded from frontend mock data";
+
+        if (!HasSameItems(existingOrder.Items, spec.Items))
+        {
+            existingOrder.Items.Clear();
+            foreach (var item in spec.Items)
+            {
+                existingOrder.Items.Add(new PurchaseOrderItem
+                {
+                    Description = item.Item1,
+                    QuantityOrdered = item.Item2,
+                    QuantityReceived = item.Item3
+                });
+            }
+        }
+    }
+
+    db.SaveChanges();
+
     if (!db.DepartmentRequests.Any())
     {
         var departmentIdByName = db.Departments.ToDictionary(d => d.Name, d => d.Id);

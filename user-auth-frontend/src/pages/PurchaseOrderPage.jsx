@@ -227,6 +227,9 @@ function PurchaseOrderPage() {
   };
 
   const getStatusClassName = (status) => {
+    if (status === "Invoice Matched") {
+      return "bg-green-100 text-green-700";
+    }
     if (status === "Rejected" || status === "Invoice Mismatched") {
       return "bg-red-100 text-red-700";
     }
