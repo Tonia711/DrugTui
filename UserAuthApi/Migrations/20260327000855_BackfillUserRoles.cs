@@ -11,9 +11,9 @@ namespace UserAuthApi.Migrations
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.Sql(@"
-                UPDATE Users
-                SET Role = 'User'
-                WHERE Role IS NULL OR TRIM(Role) = '';
+                UPDATE ""Users""
+                SET ""Role"" = 'User'
+                WHERE ""Role"" IS NULL OR TRIM(""Role"") = '';
             ");
         }
 
@@ -21,9 +21,9 @@ namespace UserAuthApi.Migrations
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.Sql(@"
-                UPDATE Users
-                SET Role = ''
-                WHERE Role = 'User';
+                UPDATE ""Users""
+                SET ""Role"" = ''
+                WHERE ""Role"" = 'User';
             ");
         }
     }

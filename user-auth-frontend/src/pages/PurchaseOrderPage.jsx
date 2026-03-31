@@ -1,85 +1,85 @@
 import { useMemo, useRef, useState, useEffect } from "react";
-import { ChevronDown, Package, Plus, Search } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { ChevronDown, Package, Plus, Search, X } from "lucide-react";
 import StatusBadge from "../components/StatusBadge";
+import { purchaseOrderApi, supplierApi } from "../util/api";
 
-const purchaseOrders = [
-  {
-    id: "ORD-001",
-    description: "Amoxicillin 500mg - 1000 tablets",
-    supplier: "PharmaCorp Ltd",
-    time: "2025-11-25 09:30",
-    status: "Pending Review",
-  },
-  {
-    id: "ORD-002",
-    description: "Paracetamol 500mg - 5000 tablets",
-    supplier: "MediSupply Inc",
-    time: "2025-11-24 14:20",
-    status: "Fully Received",
-  },
-  {
-    id: "ORD-003",
-    description: "Insulin Glargine 100uL/mL - 50 vials",
-    supplier: "HealthPro Distributors",
-    time: "2025-11-24 11:15",
-    status: "Invoice Matched",
-  },
-  {
-    id: "ORD-004",
-    description: "Metformin 850mg - 2000 tablets",
-    supplier: "PharmaCorp Ltd",
-    time: "2025-11-23 16:45",
-    status: "Invoice Mismatched",
-  },
-  {
-    id: "ORD-005",
-    description: "Lisinopril 10mg - 1500 tablets",
-    supplier: "GlobalMed Supply",
-    time: "2025-11-23 10:00",
-    status: "Approved/Ordered",
-  },
-  {
-    id: "ORD-006",
-    description: "Omeprazole 20mg - 3000 capsules",
-    supplier: "MediSupply Inc",
-    time: "2025-11-22 13:30",
-    status: "Partially Received",
-  },
-  {
-    id: "ORD-007",
-    description: "Atorvastatin 40mg - 2500 tablets",
-    supplier: "HealthPro Distributors",
-    time: "2025-11-22 09:15",
-    status: "Invoice Mismatched",
-  },
-  {
-    id: "ORD-008",
-    description: "Levothyroxine 50mcg - 1000 tablets",
-    supplier: "PharmaCorp Ltd",
-    time: "2025-11-21 15:20",
-    status: "Rejected",
-  },
-  {
-    id: "ORD-009",
-    description: "Amlodipine 5mg - 2000 tablets",
-    supplier: "GlobalMed Supply",
-    time: "2025-11-21 11:45",
-    status: "Invoice Matched",
-  },
-  {
-    id: "ORD-010",
-    description: "Gabapentin 300mg - 1200 capsules",
-    supplier: "MediSupply Inc",
-    time: "2025-11-20 14:00",
-    status: "Fully Received",
-  },
-];
+const initialCreateForm = {
+  orderNumber: "",
+  status: "Pending Review",
+  supplierId: "",
+  orderDate: "",
+  notes: "",
+  itemDescription: "",
+  itemQuantity: 1,
+};
+
+const formatDateTime = (value) => {
+  if (!value) return "-";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "-";
+  const y = date.getFullYear();
+  const m = `${date.getMonth() + 1}`.padStart(2, "0");
+  const d = `${date.getDate()}`.padStart(2, "0");
+  const hh = `${date.getHours()}`.padStart(2, "0");
+  const mm = `${date.getMinutes()}`.padStart(2, "0");
+  return `${y}-${m}-${d} ${hh}:${mm}`;
+};
+
+const getErrorMessage = (error, fallback) => {
+  const data = error?.response?.data;
+  if (!data) return fallback;
+  if (typeof data === "string") return data;
+  return data.title || fallback;
+};
 
 function PurchaseOrderPage() {
+  const navigate = useNavigate();
   const [keyword, setKeyword] = useState("");
   const [selectedStatus, setSelectedStatus] = useState(null);
   const [showStatusDropdown, setShowStatusDropdown] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [createForm, setCreateForm] = useState(initialCreateForm);
+  const [orders, setOrders] = useState([]);
+  const [suppliers, setSuppliers] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
   const statusDropdownRef = useRef(null);
+
+  const statusOptions = [
+    "All Status",
+    "Pending Review",
+    "Rejected",
+    "Approved/Ordered",
+    "Partially Received",
+    "Fully Received",
+    "Invoice Matched",
+    "Invoice Mismatched",
+  ];
+
+  const loadOrders = async () => {
+    setIsLoading(true);
+    try {
+      const res = await purchaseOrderApi.getAll();
+      setOrders(Array.isArray(res.data) ? res.data : []);
+      setError("");
+    } catch (err) {
+      setError(getErrorMessage(err, "Failed to load purchase orders."));
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const loadSuppliers = async () => {
+    try {
+      const res = await supplierApi.getAll();
+      setSuppliers(Array.isArray(res.data) ? res.data : []);
+    } catch {
+      setSuppliers([]);
+    }
+  };
 
   useEffect(() => {
     const handleOutsideClick = (event) => {
@@ -95,14 +95,31 @@ function PurchaseOrderPage() {
     return () => document.removeEventListener("mousedown", handleOutsideClick);
   }, []);
 
+  useEffect(() => {
+    loadOrders();
+    loadSuppliers();
+  }, []);
+
+  const mappedOrders = useMemo(
+    () =>
+      orders.map((order) => ({
+        id: order.orderNumber,
+        description: `${order.itemCount} item(s), total qty ${order.quantityOrderedTotal}`,
+        supplier: order.supplierName,
+        time: formatDateTime(order.orderDate),
+        status: order.status,
+      })),
+    [orders],
+  );
+
   const stats = useMemo(() => {
     const countByStatus = (status) =>
-      purchaseOrders.filter((order) => order.status === status).length;
+      mappedOrders.filter((order) => order.status === status).length;
 
     return [
       {
         label: "Total Orders",
-        value: purchaseOrders.length,
+        value: mappedOrders.length,
         status: null,
         color: "text-blue-600",
       },
@@ -151,23 +168,12 @@ function PurchaseOrderPage() {
         color: "text-red-700",
       },
     ];
-  }, []);
-
-  const statusOptions = [
-    "All Status",
-    "Pending Review",
-    "Rejected",
-    "Approved/Ordered",
-    "Partially Received",
-    "Fully Received",
-    "Invoice Matched",
-    "Invoice Mismatched",
-  ];
+  }, [mappedOrders]);
 
   const filteredOrders = useMemo(() => {
     const baseData = selectedStatus
-      ? purchaseOrders.filter((order) => order.status === selectedStatus)
-      : purchaseOrders;
+      ? mappedOrders.filter((order) => order.status === selectedStatus)
+      : mappedOrders;
 
     const normalizedKeyword = keyword.trim().toLowerCase();
     if (!normalizedKeyword) return baseData;
@@ -178,7 +184,47 @@ function PurchaseOrderPage() {
         order.description.toLowerCase().includes(normalizedKeyword) ||
         order.supplier.toLowerCase().includes(normalizedKeyword),
     );
-  }, [keyword, selectedStatus]);
+  }, [keyword, selectedStatus, mappedOrders]);
+
+  const handleCreateOrder = async (event) => {
+    event.preventDefault();
+    setMessage("");
+    setError("");
+
+    if (!createForm.supplierId) {
+      setError("Please select a supplier.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      await purchaseOrderApi.create({
+        orderNumber: createForm.orderNumber.trim(),
+        status: createForm.status,
+        supplierId: Number(createForm.supplierId),
+        orderDate: createForm.orderDate
+          ? new Date(createForm.orderDate).toISOString()
+          : null,
+        notes: createForm.notes.trim() || null,
+        items: [
+          {
+            medicationId: null,
+            description: createForm.itemDescription.trim(),
+            quantityOrdered: Number(createForm.itemQuantity),
+          },
+        ],
+      });
+
+      setShowCreateModal(false);
+      setCreateForm(initialCreateForm);
+      setMessage("Purchase order created successfully.");
+      await loadOrders();
+    } catch (err) {
+      setError(getErrorMessage(err, "Failed to create purchase order."));
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const getStatusClassName = (status) => {
     if (status === "Rejected" || status === "Invoice Mismatched") {
@@ -197,11 +243,27 @@ function PurchaseOrderPage() {
           <Package size={14} />
           <span>Purchase Order Management</span>
         </div>
-        <button className="flex items-center gap-2 bg-blue-600 text-white px-3 py-1.5 rounded-lg hover:bg-blue-700 transition-colors">
+        <button
+          type="button"
+          onClick={() => setShowCreateModal(true)}
+          className="flex items-center gap-2 bg-blue-600 text-white px-3 py-1.5 rounded-lg hover:bg-blue-700 transition-colors"
+        >
           <Plus size={14} />
           <span className="text-xs">Add New Order</span>
         </button>
       </div>
+
+      {message && (
+        <div className="mb-4 rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-xs text-green-700">
+          {message}
+        </div>
+      )}
+
+      {error && (
+        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+          {error}
+        </div>
+      )}
 
       <div className="mb-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4">
         {stats.map((stat) => {
@@ -308,7 +370,13 @@ function PurchaseOrderPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {!filteredOrders.length ? (
+              {isLoading ? (
+                <tr>
+                  <td colSpan={5} className="px-5 py-6 text-xs text-gray-500">
+                    Loading purchase orders...
+                  </td>
+                </tr>
+              ) : !filteredOrders.length ? (
                 <tr>
                   <td colSpan={5} className="px-5 py-6 text-xs text-gray-500">
                     No purchase orders found.
@@ -319,6 +387,9 @@ function PurchaseOrderPage() {
                   <tr
                     key={order.id}
                     className="hover:bg-gray-50 cursor-pointer transition-colors"
+                    onClick={() =>
+                      navigate(`/procurement/purchase-order/${order.id}`)
+                    }
                   >
                     <td className="px-5 py-3 text-xs text-gray-900 align-middle">
                       {order.id}
@@ -346,6 +417,137 @@ function PurchaseOrderPage() {
           </table>
         </div>
       </div>
+
+      {showCreateModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <form
+            onSubmit={handleCreateOrder}
+            className="bg-white rounded-lg shadow-xl max-w-lg w-full p-6"
+          >
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="text-sm text-gray-900">Add New Purchase Order</h2>
+              <button
+                type="button"
+                onClick={() => setShowCreateModal(false)}
+                className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <input
+                className="px-3 py-2 border border-gray-300 rounded-lg text-xs"
+                placeholder="Order Number"
+                value={createForm.orderNumber}
+                onChange={(e) =>
+                  setCreateForm((prev) => ({
+                    ...prev,
+                    orderNumber: e.target.value,
+                  }))
+                }
+                required
+              />
+              <select
+                className="px-3 py-2 border border-gray-300 rounded-lg text-xs"
+                value={createForm.status}
+                onChange={(e) =>
+                  setCreateForm((prev) => ({ ...prev, status: e.target.value }))
+                }
+              >
+                {statusOptions
+                  .filter((option) => option !== "All Status")
+                  .map((status) => (
+                    <option key={status} value={status}>
+                      {status}
+                    </option>
+                  ))}
+              </select>
+              <select
+                className="px-3 py-2 border border-gray-300 rounded-lg text-xs"
+                value={createForm.supplierId}
+                onChange={(e) =>
+                  setCreateForm((prev) => ({
+                    ...prev,
+                    supplierId: e.target.value,
+                  }))
+                }
+                required
+              >
+                <option value="">Select Supplier</option>
+                {suppliers.map((supplier) => (
+                  <option key={supplier.id} value={supplier.id}>
+                    {supplier.name}
+                  </option>
+                ))}
+              </select>
+              <input
+                type="datetime-local"
+                className="px-3 py-2 border border-gray-300 rounded-lg text-xs"
+                value={createForm.orderDate}
+                onChange={(e) =>
+                  setCreateForm((prev) => ({
+                    ...prev,
+                    orderDate: e.target.value,
+                  }))
+                }
+              />
+              <input
+                className="md:col-span-2 px-3 py-2 border border-gray-300 rounded-lg text-xs"
+                placeholder="Item Description"
+                value={createForm.itemDescription}
+                onChange={(e) =>
+                  setCreateForm((prev) => ({
+                    ...prev,
+                    itemDescription: e.target.value,
+                  }))
+                }
+                required
+              />
+              <input
+                type="number"
+                min="1"
+                className="px-3 py-2 border border-gray-300 rounded-lg text-xs"
+                placeholder="Item Quantity"
+                value={createForm.itemQuantity}
+                onChange={(e) =>
+                  setCreateForm((prev) => ({
+                    ...prev,
+                    itemQuantity: e.target.value,
+                  }))
+                }
+                required
+              />
+              <textarea
+                rows={3}
+                className="md:col-span-2 px-3 py-2 border border-gray-300 rounded-lg text-xs"
+                placeholder="Notes"
+                value={createForm.notes}
+                onChange={(e) =>
+                  setCreateForm((prev) => ({ ...prev, notes: e.target.value }))
+                }
+              />
+            </div>
+
+            <div className="flex gap-2 mt-4">
+              <button
+                type="button"
+                onClick={() => setShowCreateModal(false)}
+                className="flex-1 px-4 py-2 text-xs bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="flex-1 px-4 py-2 text-xs bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-60"
+              >
+                {isSubmitting ? "Creating..." : "Create Order"}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
     </div>
   );
 }
