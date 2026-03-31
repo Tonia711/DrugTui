@@ -1,6 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
-import { AlertTriangle, ArrowLeft, Check, CheckCircle, Package, XCircle } from "lucide-react";
+import {
+  AlertTriangle,
+  ArrowLeft,
+  Check,
+  CheckCircle,
+  Package,
+  XCircle,
+} from "lucide-react";
 import StatusBadge from "../components/StatusBadge";
 import { purchaseOrderApi } from "../util/api";
 
@@ -87,9 +94,14 @@ function PurchaseOrderDetailsPage() {
       "Invoice Matched",
       "Invoice Mismatched",
     ];
-    const completedStatuses = ["Invoice Matched", "Invoice Mismatched", "Fully Received"];
+    const completedStatuses = [
+      "Invoice Matched",
+      "Invoice Mismatched",
+      "Fully Received",
+    ];
 
-    const approvedFinished = approvedStatuses.includes(status) || status === "Rejected";
+    const approvedFinished =
+      approvedStatuses.includes(status) || status === "Rejected";
     const receivedFinished = receivedStatuses.includes(status);
     const completedFinished = completedStatuses.includes(status);
 
@@ -115,22 +127,36 @@ function PurchaseOrderDetailsPage() {
       {
         id: "received",
         label: "Received",
-        status: makeState(receivedFinished, approvedFinished && !receivedFinished),
+        status: makeState(
+          receivedFinished,
+          approvedFinished && !receivedFinished,
+        ),
       },
       {
         id: "completed",
         label: "Completed",
-        status: makeState(completedFinished, receivedFinished && !completedFinished),
+        status: makeState(
+          completedFinished,
+          receivedFinished && !completedFinished,
+        ),
       },
     ];
   }, [order]);
 
   const progressPercentage = useMemo(() => {
     if (!progressSteps.length) return 0;
-    const inProgressIndex = progressSteps.findIndex((step) => step.status === "in-progress");
-    const finishedCount = progressSteps.filter((step) => step.status === "finished").length;
-    const targetStepIndex = inProgressIndex >= 0 ? inProgressIndex : finishedCount - 1;
-    const raw = progressSteps.length > 1 ? (targetStepIndex / (progressSteps.length - 1)) * 100 : 0;
+    const inProgressIndex = progressSteps.findIndex(
+      (step) => step.status === "in-progress",
+    );
+    const finishedCount = progressSteps.filter(
+      (step) => step.status === "finished",
+    ).length;
+    const targetStepIndex =
+      inProgressIndex >= 0 ? inProgressIndex : finishedCount - 1;
+    const raw =
+      progressSteps.length > 1
+        ? (targetStepIndex / (progressSteps.length - 1)) * 100
+        : 0;
     return Math.max(0, Math.min(100, raw));
   }, [progressSteps]);
 
@@ -208,7 +234,11 @@ function PurchaseOrderDetailsPage() {
 
               <div className="relative flex justify-between">
                 {progressSteps.map((step, index) => (
-                  <div key={step.id} className="flex flex-col items-center" style={{ minWidth: "120px" }}>
+                  <div
+                    key={step.id}
+                    className="flex flex-col items-center"
+                    style={{ minWidth: "120px" }}
+                  >
                     <div
                       className={`w-10 h-10 rounded-full flex items-center justify-center mb-2 z-10 transition-all ${
                         step.status === "finished"
@@ -223,14 +253,18 @@ function PurchaseOrderDetailsPage() {
                       )}
                     </div>
 
-                    <p className={`mb-1 text-center text-xs ${step.status === "waiting" ? "text-gray-400" : "text-gray-900"}`}>
+                    <p
+                      className={`mb-1 text-center text-xs ${step.status === "waiting" ? "text-gray-400" : "text-gray-900"}`}
+                    >
                       {step.label}
                     </p>
 
                     {step.person && (
                       <div className="text-center">
                         <p className="text-xs text-gray-600">{step.person}</p>
-                        {step.time && <p className="text-xs text-gray-500">{step.time}</p>}
+                        {step.time && (
+                          <p className="text-xs text-gray-500">{step.time}</p>
+                        )}
                       </div>
                     )}
 
@@ -249,7 +283,9 @@ function PurchaseOrderDetailsPage() {
 
           <div className="mb-6">
             <h1 className="text-gray-900 mb-1">Order Details</h1>
-            <p className="text-xs text-gray-500">View and manage order status and items</p>
+            <p className="text-xs text-gray-500">
+              View and manage order status and items
+            </p>
           </div>
 
           <div className="bg-white rounded-lg border border-gray-200 p-6 mb-6">
@@ -291,7 +327,9 @@ function PurchaseOrderDetailsPage() {
                   >
                     <div className="flex-1">
                       <div className="mb-2">
-                        <span className="text-xs text-gray-900">{item.name}</span>
+                        <span className="text-xs text-gray-900">
+                          {item.name}
+                        </span>
                       </div>
                       <div className="flex justify-between text-xs text-gray-700">
                         <span>Ordered Qty:</span>
@@ -324,21 +362,33 @@ function PurchaseOrderDetailsPage() {
                       <div
                         key={`${item.name}-${index}`}
                         className={`p-4 rounded-lg border-2 transition-colors min-h-[88px] flex items-center ${
-                          isMatch ? "border-green-300 bg-green-50" : "border-red-300 bg-red-50"
+                          isMatch
+                            ? "border-green-300 bg-green-50"
+                            : "border-red-300 bg-red-50"
                         }`}
                       >
                         <div className="flex-1">
                           <div className="flex items-start justify-between mb-2">
                             <div className="flex items-center gap-2 flex-1">
-                              <span className="text-xs text-gray-900">{item.name}</span>
+                              <span className="text-xs text-gray-900">
+                                {item.name}
+                              </span>
                               {!isMatch && isShort && (
-                                <span className="text-xs text-red-700">Short {orderedQty - item.quantity} units</span>
+                                <span className="text-xs text-red-700">
+                                  Short {orderedQty - item.quantity} units
+                                </span>
                               )}
                             </div>
                             {isMatch ? (
-                              <Check className="text-green-500 flex-shrink-0" size={20} />
+                              <Check
+                                className="text-green-500 flex-shrink-0"
+                                size={20}
+                              />
                             ) : (
-                              <AlertTriangle className="text-red-500 flex-shrink-0" size={20} />
+                              <AlertTriangle
+                                className="text-red-500 flex-shrink-0"
+                                size={20}
+                              />
                             )}
                           </div>
                           <div className="flex justify-between text-xs text-gray-700">
@@ -358,15 +408,21 @@ function PurchaseOrderDetailsPage() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <p className="text-xs text-gray-600 mb-1">Order Date</p>
-                <p className="text-xs text-gray-900">{formatDateTime(order.orderDate)}</p>
+                <p className="text-xs text-gray-900">
+                  {formatDateTime(order.orderDate)}
+                </p>
               </div>
               <div>
                 <p className="text-xs text-gray-600 mb-1">Created By</p>
-                <p className="text-xs text-gray-900">{order.createdByUsername || "-"}</p>
+                <p className="text-xs text-gray-900">
+                  {order.createdByUsername || "-"}
+                </p>
               </div>
               <div>
                 <p className="text-xs text-gray-600 mb-1">Created At</p>
-                <p className="text-xs text-gray-900">{formatDateTime(order.createdAt)}</p>
+                <p className="text-xs text-gray-900">
+                  {formatDateTime(order.createdAt)}
+                </p>
               </div>
             </div>
 
@@ -378,13 +434,17 @@ function PurchaseOrderDetailsPage() {
             {order.status === "Rejected" && (
               <div className="mt-4 p-4 rounded-lg border border-red-200 bg-red-50 flex items-start gap-2">
                 <XCircle size={16} className="text-red-600 mt-0.5" />
-                <div className="text-xs text-red-700">This order has been rejected.</div>
+                <div className="text-xs text-red-700">
+                  This order has been rejected.
+                </div>
               </div>
             )}
           </div>
 
           <div className="bg-white rounded-lg border border-gray-200 p-6">
-            <label className="block mb-2 text-xs text-gray-700">Rejection Comment</label>
+            <label className="block mb-2 text-xs text-gray-700">
+              Rejection Comment
+            </label>
             <textarea
               value={rejectionComment}
               onChange={(event) => setRejectionComment(event.target.value)}
