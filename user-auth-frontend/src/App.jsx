@@ -7,6 +7,7 @@ import HomePage from "./pages/HomePage";
 import InventoryPage from "./pages/InventoryPage";
 import ItemDetailsPage from "./pages/ItemDetailsPage";
 import PurchaseOrderPage from "./pages/PurchaseOrderPage";
+import PurchaseOrderDetailsPage from "./pages/PurchaseOrderDetailsPage";
 import InvoicePage from "./pages/InvoicePage";
 import DepartmentRequestPage from "./pages/DepartmentRequestPage";
 import DepartmentRequestDetailsPage from "./pages/DepartmentRequestDetailsPage";
@@ -37,6 +38,10 @@ function App() {
         <Route
           path="procurement/purchase-order"
           element={<PurchaseOrderPage />}
+        />
+        <Route
+          path="procurement/purchase-order/:orderId"
+          element={<PurchaseOrderDetailsPage />}
         />
         <Route path="procurement/invoice" element={<InvoicePage />} />
         <Route path="department-request" element={<DepartmentRequestPage />} />

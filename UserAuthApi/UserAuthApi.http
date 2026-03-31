@@ -1,6 +1,145 @@
 @UserAuthApi_HostAddress = http://localhost:5147
 
-GET {{UserAuthApi_HostAddress}}/weatherforecast/
+### Login (save token manually from response)
+POST {{UserAuthApi_HostAddress}}/Users/login
+Content-Type: application/json
+
+{
+	"email": "admin@drugtui.local",
+	"password": "Admin123!"
+}
+
+###
+@token = REPLACE_WITH_JWT_TOKEN
+
+### Departments - Get all
+GET {{UserAuthApi_HostAddress}}/Departments
+Authorization: Bearer {{token}}
 Accept: application/json
 
 ###
+### Departments - Create (Admin)
+POST {{UserAuthApi_HostAddress}}/Departments
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+	"name": "Oncology",
+	"description": "Oncology Department"
+}
+
+###
+### Suppliers - Get all
+GET {{UserAuthApi_HostAddress}}/Suppliers
+Authorization: Bearer {{token}}
+Accept: application/json
+
+###
+### Suppliers - Create (Admin)
+POST {{UserAuthApi_HostAddress}}/Suppliers
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+	"name": "MediCore Pharma",
+	"email": "sales@medicore.example",
+	"phone": "+64-9-555-0101",
+	"address": "1 Queen Street, Auckland"
+}
+
+###
+### Storage zones - Get all
+GET {{UserAuthApi_HostAddress}}/StorageZones
+Authorization: Bearer {{token}}
+Accept: application/json
+
+###
+### Storage zones - Create (Admin)
+POST {{UserAuthApi_HostAddress}}/StorageZones
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+	"name": "Cold Storage A",
+	"description": "Vaccines and temperature-sensitive drugs",
+	"capacity": 200,
+	"currentCapacity": 35,
+	"temperatureMin": 2,
+	"temperatureMax": 8,
+	"humidityMin": 30,
+	"humidityMax": 50
+}
+
+###
+### Storage shelves - Get all
+GET {{UserAuthApi_HostAddress}}/StorageShelves
+Authorization: Bearer {{token}}
+Accept: application/json
+
+###
+### Storage shelves - Create (Admin)
+POST {{UserAuthApi_HostAddress}}/StorageShelves
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+	"storageZoneId": 1,
+	"code": "A-01",
+	"isActive": true
+}
+
+###
+### Purchase orders - Get all
+GET {{UserAuthApi_HostAddress}}/PurchaseOrders
+Authorization: Bearer {{token}}
+Accept: application/json
+
+###
+### Purchase orders - Create
+POST {{UserAuthApi_HostAddress}}/PurchaseOrders
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+	"orderNumber": "PO-2026-0001",
+	"status": "Pending Review",
+	"supplierId": 1,
+	"orderDate": "2026-03-31T00:00:00Z",
+	"notes": "Urgent replenishment",
+	"items": [
+		{
+			"medicationId": null,
+			"description": "Paracetamol 500mg",
+			"quantityOrdered": 100
+		}
+	]
+}
+
+###
+### Department requests - Get all
+GET {{UserAuthApi_HostAddress}}/DepartmentRequests
+Authorization: Bearer {{token}}
+Accept: application/json
+
+###
+### Department requests - Create
+POST {{UserAuthApi_HostAddress}}/DepartmentRequests
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+	"requestNumber": "DR-2026-0001",
+	"status": "Pending Acceptance",
+	"departmentId": 1,
+	"requestedAt": "2026-03-31T00:00:00Z",
+	"notes": "Required for evening rounds",
+	"items": [
+		{
+			"medicationId": null,
+			"description": "Amoxicillin 250mg",
+			"quantityRequested": 60,
+			"quantityApproved": 0
+		}
+	]
+}
+
