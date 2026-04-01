@@ -141,7 +141,9 @@ function InvoicePage() {
     return baseData.filter(
       (invoice) =>
         invoice.invoiceNumber.toLowerCase().includes(normalizedKeyword) ||
-        (invoice.supplierName || "").toLowerCase().includes(normalizedKeyword) ||
+        (invoice.supplierName || "")
+          .toLowerCase()
+          .includes(normalizedKeyword) ||
         (invoice.purchaseOrderNumber || "")
           .toLowerCase()
           .includes(normalizedKeyword),

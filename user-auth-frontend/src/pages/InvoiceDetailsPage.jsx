@@ -129,8 +129,11 @@ function InvoiceDetailsPage() {
     if (!invoice?.items?.length) return [];
 
     return invoice.items.map((item, index) => {
-      const hasReceivedQuantity = item.receivedQuantity !== null && item.receivedQuantity !== undefined;
-      const receivedQty = hasReceivedQuantity ? Number(item.receivedQuantity) : null;
+      const hasReceivedQuantity =
+        item.receivedQuantity !== null && item.receivedQuantity !== undefined;
+      const receivedQty = hasReceivedQuantity
+        ? Number(item.receivedQuantity)
+        : null;
       const invoiceQty = Number(item.quantity ?? 0);
       const amount = Number(item.amount ?? 0);
       const unitPrice = Number(item.unitPrice ?? 0);
@@ -150,7 +153,8 @@ function InvoiceDetailsPage() {
   }, [invoice]);
 
   const discrepancyCount = useMemo(
-    () => normalizedItems.filter((item) => item.status === "discrepancy").length,
+    () =>
+      normalizedItems.filter((item) => item.status === "discrepancy").length,
     [normalizedItems],
   );
 
@@ -169,7 +173,9 @@ function InvoiceDetailsPage() {
   const groupedItems = useMemo(
     () =>
       orderIds.map((orderId) => {
-        const orderItems = normalizedItems.filter((item) => item.orderId === orderId);
+        const orderItems = normalizedItems.filter(
+          (item) => item.orderId === orderId,
+        );
         const sortedItems = [...orderItems].sort((a, b) => {
           if (a.status === "discrepancy" && b.status === "match") return -1;
           if (a.status === "match" && b.status === "discrepancy") return 1;
@@ -190,7 +196,10 @@ function InvoiceDetailsPage() {
     }
 
     const status = invoice.status;
-    const hasReviewed = status === "Discrepancy" || status === "Verified" || status === "Completed";
+    const hasReviewed =
+      status === "Discrepancy" ||
+      status === "Verified" ||
+      status === "Completed";
     const hasCompleted = status === "Verified" || status === "Completed";
 
     const makeState = (finished, inProgress) => {
@@ -339,7 +348,8 @@ function InvoiceDetailsPage() {
                   {discrepancyCount > 0 && (
                     <span className="text-xs text-red-600 flex items-center gap-1">
                       <AlertCircle size={14} />
-                      {discrepancyCount} item{discrepancyCount > 1 ? "s" : ""} with discrepancy
+                      {discrepancyCount} item{discrepancyCount > 1 ? "s" : ""}{" "}
+                      with discrepancy
                     </span>
                   )}
                 </div>
@@ -400,28 +410,36 @@ function InvoiceDetailsPage() {
                   <Building size={12} />
                   Supplier
                 </div>
-                <div className="text-xs text-gray-900">{invoice.supplierName || "-"}</div>
+                <div className="text-xs text-gray-900">
+                  {invoice.supplierName || "-"}
+                </div>
               </div>
               <div>
                 <div className="text-[10px] text-gray-500 mb-1 flex items-center gap-1">
                   <Package size={12} />
                   Order IDs
                 </div>
-                <div className="text-xs text-gray-900">{orderIds.join(", ") || "-"}</div>
+                <div className="text-xs text-gray-900">
+                  {orderIds.join(", ") || "-"}
+                </div>
               </div>
               <div>
                 <div className="text-[10px] text-gray-500 mb-1 flex items-center gap-1">
                   <FileText size={12} />
                   PO Number
                 </div>
-                <div className="text-xs text-gray-900">{invoice.purchaseOrderNumber || "-"}</div>
+                <div className="text-xs text-gray-900">
+                  {invoice.purchaseOrderNumber || "-"}
+                </div>
               </div>
               <div>
                 <div className="text-[10px] text-gray-500 mb-1 flex items-center gap-1">
                   <Calendar size={12} />
                   Invoice Date
                 </div>
-                <div className="text-xs text-gray-900">{formatDateTime(invoice.invoiceDate).split(" ")[0]}</div>
+                <div className="text-xs text-gray-900">
+                  {formatDateTime(invoice.invoiceDate).split(" ")[0]}
+                </div>
               </div>
               <div>
                 <div className="text-[10px] text-gray-500 mb-1 flex items-center gap-1">
@@ -464,15 +482,24 @@ function InvoiceDetailsPage() {
                 <tbody>
                   {!groupedItems.length ? (
                     <tr>
-                      <td colSpan={6} className="px-5 py-6 text-xs text-gray-500">
+                      <td
+                        colSpan={6}
+                        className="px-5 py-6 text-xs text-gray-500"
+                      >
                         No item records.
                       </td>
                     </tr>
                   ) : (
                     groupedItems.map((group) => (
                       <>
-                        <tr key={`header-${group.orderId}`} className="bg-gray-100 border-t-2 border-gray-300">
-                          <td className="px-5 py-2 text-xs text-gray-900" colSpan={6}>
+                        <tr
+                          key={`header-${group.orderId}`}
+                          className="bg-gray-100 border-t-2 border-gray-300"
+                        >
+                          <td
+                            className="px-5 py-2 text-xs text-gray-900"
+                            colSpan={6}
+                          >
                             <span className="flex items-center gap-1.5">
                               <Package size={14} />
                               <strong>Order ID: {group.orderId}</strong>
@@ -480,7 +507,12 @@ function InvoiceDetailsPage() {
                           </td>
                         </tr>
                         {group.items.map((item) => (
-                          <tr key={item.id} className={item.status === "discrepancy" ? "bg-red-50" : ""}>
+                          <tr
+                            key={item.id}
+                            className={
+                              item.status === "discrepancy" ? "bg-red-50" : ""
+                            }
+                          >
                             <td className="px-5 py-3 text-xs text-gray-900 align-middle">
                               {item.name}
                             </td>
@@ -533,7 +565,9 @@ function InvoiceDetailsPage() {
               <div className="space-y-2">
                 <div className="flex justify-between text-xs">
                   <span className="text-gray-600">Subtotal</span>
-                  <span className="text-gray-900">${computedTotal.toFixed(2)}</span>
+                  <span className="text-gray-900">
+                    ${computedTotal.toFixed(2)}
+                  </span>
                 </div>
                 <div className="flex justify-between text-xs">
                   <span className="text-gray-600">Tax</span>
@@ -542,7 +576,9 @@ function InvoiceDetailsPage() {
                 <div className="border-t border-gray-200 pt-2 mt-2">
                   <div className="flex justify-between">
                     <span className="text-gray-900">Total</span>
-                    <span className="text-blue-600">${computedTotal.toFixed(2)}</span>
+                    <span className="text-blue-600">
+                      ${computedTotal.toFixed(2)}
+                    </span>
                   </div>
                 </div>
               </div>
