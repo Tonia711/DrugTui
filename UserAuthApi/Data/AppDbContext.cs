@@ -19,6 +19,8 @@ namespace UserAuthApi.Data
         public DbSet<StorageShelf> StorageShelves => Set<StorageShelf>();
         public DbSet<PurchaseOrder> PurchaseOrders => Set<PurchaseOrder>();
         public DbSet<PurchaseOrderItem> PurchaseOrderItems => Set<PurchaseOrderItem>();
+        public DbSet<Invoice> Invoices => Set<Invoice>();
+        public DbSet<InvoiceItem> InvoiceItems => Set<InvoiceItem>();
         public DbSet<DepartmentRequest> DepartmentRequests => Set<DepartmentRequest>();
         public DbSet<DepartmentRequestItem> DepartmentRequestItems => Set<DepartmentRequestItem>();
 
@@ -110,6 +112,34 @@ namespace UserAuthApi.Data
                 .HasOne(item => item.Medication)
                 .WithMany()
                 .HasForeignKey(item => item.MedicationId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            modelBuilder.Entity<Invoice>()
+                .HasIndex(inv => inv.InvoiceNumber)
+                .IsUnique();
+
+            modelBuilder.Entity<Invoice>()
+                .HasOne(inv => inv.PurchaseOrder)
+                .WithMany()
+                .HasForeignKey(inv => inv.PurchaseOrderId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<Invoice>()
+                .HasOne(inv => inv.Supplier)
+                .WithMany(s => s.Invoices)
+                .HasForeignKey(inv => inv.SupplierId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<InvoiceItem>()
+                .HasOne(item => item.Invoice)
+                .WithMany(inv => inv.Items)
+                .HasForeignKey(item => item.InvoiceId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<InvoiceItem>()
+                .HasOne(item => item.PurchaseOrderItem)
+                .WithMany()
+                .HasForeignKey(item => item.PurchaseOrderItemId)
                 .OnDelete(DeleteBehavior.SetNull);
         }
     }

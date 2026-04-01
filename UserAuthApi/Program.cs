@@ -582,6 +582,137 @@ using (var scope = app.Services.CreateScope())
         }
     }
 
+    var invoiceRefreshSpecs = new[]
+    {
+        new
+        {
+            InvoiceNumber = "INV-2025-001",
+            OrderNumber = "ORD-001",
+            SupplierName = "PharmaCorp Ltd",
+            Status = "Pending",
+            InvoiceDate = "2025-11-25 09:00",
+            Notes = "Awaiting verification",
+            Items = new (string Description, decimal Quantity, string Unit, decimal UnitPrice, decimal Amount)[]
+            {
+                ("Paracetamol 500mg Tablets", 5000m, "tablet", 0.05m, 250m),
+                ("Aspirin 100mg Tablets", 2000m, "tablet", 0.04m, 80m),
+            }
+        },
+        new
+        {
+            InvoiceNumber = "INV-2025-002",
+            OrderNumber = "ORD-002",
+            SupplierName = "MediSupply Inc",
+            Status = "Completed",
+            InvoiceDate = "2025-11-26 11:20",
+            Notes = "Matched and closed",
+            Items = new (string Description, decimal Quantity, string Unit, decimal UnitPrice, decimal Amount)[]
+            {
+                ("Amoxicillin Capsules", 90m, "capsule", 0.45m, 40.5m),
+                ("Cold Relief Granules", 100m, "box", 0.70m, 70m),
+            }
+        },
+        new
+        {
+            InvoiceNumber = "INV-2025-003",
+            OrderNumber = "ORD-006",
+            SupplierName = "MediSupply Inc",
+            Status = "Discrepancy",
+            InvoiceDate = "2025-11-27 14:10",
+            Notes = "Quantity mismatch on Omeprazole 20mg",
+            Items = new (string Description, decimal Quantity, string Unit, decimal UnitPrice, decimal Amount)[]
+            {
+                ("Omeprazole 20mg Capsules", 2600m, "capsule", 0.55m, 1430m),
+                ("Omeprazole 40mg Capsules", 600m, "capsule", 0.68m, 408m),
+            }
+        },
+        new
+        {
+            InvoiceNumber = "INV-2025-004",
+            OrderNumber = "ORD-010",
+            SupplierName = "MediSupply Inc",
+            Status = "Verified",
+            InvoiceDate = "2025-11-28 10:30",
+            Notes = "Verified against partial receipt",
+            Items = new (string Description, decimal Quantity, string Unit, decimal UnitPrice, decimal Amount)[]
+            {
+                ("Gabapentin 300mg Capsules", 900m, "capsule", 0.22m, 198m),
+                ("Gabapentin 100mg Capsules", 300m, "capsule", 0.18m, 54m),
+            }
+        },
+        new
+        {
+            InvoiceNumber = "INV-2025-005",
+            OrderNumber = "ORD-009",
+            SupplierName = "GlobalMed Supply",
+            Status = "Completed",
+            InvoiceDate = "2025-11-29 09:40",
+            Notes = "Fully reconciled",
+            Items = new (string Description, decimal Quantity, string Unit, decimal UnitPrice, decimal Amount)[]
+            {
+                ("Amlodipine 5mg Tablets", 2000m, "tablet", 0.06m, 120m),
+                ("Amlodipine 10mg Tablets", 600m, "tablet", 0.08m, 48m),
+            }
+        },
+    };
+
+    foreach (var spec in invoiceRefreshSpecs)
+    {
+        if (!supplierIdLookup.TryGetValue(spec.SupplierName, out var supplierId))
+        {
+            continue;
+        }
+
+        var purchaseOrder = db.PurchaseOrders
+            .Include(po => po.Items)
+            .FirstOrDefault(po => po.OrderNumber == spec.OrderNumber);
+
+        if (purchaseOrder == null)
+        {
+            continue;
+        }
+
+        var existingInvoice = db.Invoices
+            .Include(inv => inv.Items)
+            .FirstOrDefault(inv => inv.InvoiceNumber == spec.InvoiceNumber);
+
+        if (existingInvoice == null)
+        {
+            existingInvoice = new Invoice
+            {
+                InvoiceNumber = spec.InvoiceNumber,
+                CreatedAt = DateTime.UtcNow
+            };
+            db.Invoices.Add(existingInvoice);
+        }
+
+        existingInvoice.PurchaseOrderId = purchaseOrder.Id;
+        existingInvoice.SupplierId = supplierId;
+        existingInvoice.Status = spec.Status;
+        existingInvoice.InvoiceDate = ParseUtc(spec.InvoiceDate, DateTime.UtcNow);
+        existingInvoice.UpdatedAt = DateTime.UtcNow;
+        existingInvoice.Notes = spec.Notes;
+        existingInvoice.TotalAmount = spec.Items.Sum(i => i.Amount);
+
+        existingInvoice.Items.Clear();
+        foreach (var item in spec.Items)
+        {
+            var matchedOrderItemId = purchaseOrder.Items
+                .FirstOrDefault(poItem => poItem.Description == item.Description)?.Id;
+
+            existingInvoice.Items.Add(new InvoiceItem
+            {
+                Description = item.Description,
+                Quantity = item.Quantity,
+                Unit = item.Unit,
+                UnitPrice = item.UnitPrice,
+                Amount = item.Amount,
+                PurchaseOrderItemId = matchedOrderItemId,
+                Notes = null
+            });
+        }
+    }
+
     db.SaveChanges();
 
     if (!db.DepartmentRequests.Any())

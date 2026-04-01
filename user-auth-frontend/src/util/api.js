@@ -50,6 +50,19 @@ export const purchaseOrderApi = {
   create: (payload) => api.post("/PurchaseOrders", payload),
 };
 
+export const invoiceApi = {
+  getAll: ({ keyword, status } = {}) =>
+    api.get("/Invoices", {
+      params: {
+        ...(keyword ? { keyword } : {}),
+        ...(status ? { status } : {}),
+      },
+    }),
+  getById: (invoiceId) => api.get(`/Invoices/${invoiceId}`),
+  updateStatus: (invoiceId, status) =>
+    api.put(`/Invoices/${invoiceId}/status`, { status }),
+};
+
 export const departmentRequestApi = {
   getAll: (keyword) =>
     api.get("/DepartmentRequests", { params: keyword ? { keyword } : {} }),

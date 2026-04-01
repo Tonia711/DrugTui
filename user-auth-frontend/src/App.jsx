@@ -9,6 +9,7 @@ import ItemDetailsPage from "./pages/ItemDetailsPage";
 import PurchaseOrderPage from "./pages/PurchaseOrderPage";
 import PurchaseOrderDetailsPage from "./pages/PurchaseOrderDetailsPage";
 import InvoicePage from "./pages/InvoicePage";
+import InvoiceDetailsPage from "./pages/InvoiceDetailsPage";
 import DepartmentRequestPage from "./pages/DepartmentRequestPage";
 import DepartmentRequestDetailsPage from "./pages/DepartmentRequestDetailsPage";
 import StorageZonePage from "./pages/StorageZonePage";
@@ -44,6 +45,10 @@ function App() {
           element={<PurchaseOrderDetailsPage />}
         />
         <Route path="procurement/invoice" element={<InvoicePage />} />
+        <Route
+          path="procurement/invoice/:invoiceId"
+          element={<InvoiceDetailsPage />}
+        />
         <Route path="department-request" element={<DepartmentRequestPage />} />
         <Route
           path="department-request/:requestId"

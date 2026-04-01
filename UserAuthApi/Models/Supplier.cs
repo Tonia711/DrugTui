@@ -21,5 +21,6 @@ namespace UserAuthApi.Models
         public string? Address { get; set; }
 
         public ICollection<PurchaseOrder> PurchaseOrders { get; set; } = new List<PurchaseOrder>();
+        public ICollection<Invoice> Invoices { get; set; } = new List<Invoice>();
     }
 }
