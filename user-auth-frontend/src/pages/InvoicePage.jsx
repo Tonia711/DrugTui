@@ -1,58 +1,45 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { ChevronDown, FileText, Search, Upload, X } from "lucide-react";
+import { invoiceApi } from "../util/api";
 import StatusBadge from "../components/StatusBadge";
 
-const invoicesData = [
-  {
-    id: "INV-001",
-    invoiceNumber: "INV-2025-001",
-    supplier: "MediSupply Co.",
-    date: "2025-01-15",
-    amount: "12,450.00",
-    status: "Pending",
-    poNumber: "PO-2025-001",
-  },
-  {
-    id: "INV-002",
-    invoiceNumber: "INV-2025-002",
-    supplier: "PharmaDirect Ltd.",
-    date: "2025-01-18",
-    amount: "8,320.50",
-    status: "Completed",
-    poNumber: "PO-2025-002",
-  },
-  {
-    id: "INV-003",
-    invoiceNumber: "INV-2025-003",
-    supplier: "HealthCare Supplies",
-    date: "2025-01-20",
-    amount: "15,780.00",
-    status: "Discrepancy",
-    poNumber: "PO-2025-003",
-  },
-  {
-    id: "INV-004",
-    invoiceNumber: "INV-2025-004",
-    supplier: "GlobalMed Supply",
-    date: "2025-01-23",
-    amount: "10,215.80",
-    status: "Pending",
-    poNumber: "PO-2025-004",
-  },
-  {
-    id: "INV-005",
-    invoiceNumber: "INV-2025-005",
-    supplier: "PharmaCorp Ltd",
-    date: "2025-01-25",
-    amount: "9,890.00",
-    status: "Completed",
-    poNumber: "PO-2025-005",
-  },
-];
+const formatDate = (value) => {
+  if (!value) return "-";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "-";
+  const y = date.getFullYear();
+  const m = `${date.getMonth() + 1}`.padStart(2, "0");
+  const d = `${date.getDate()}`.padStart(2, "0");
+  return `${y}-${m}-${d}`;
+};
+
+const getDisplayStatus = (status) =>
+  status === "Verified" ? "Completed" : status;
+
+const getStatusClassName = (status) => {
+  const displayStatus = getDisplayStatus(status);
+  switch (displayStatus) {
+    case "Completed":
+      return "bg-blue-100 text-blue-700";
+    case "Voided":
+      return "bg-gray-100 text-gray-700";
+    case "Pending":
+      return "bg-amber-100 text-amber-700";
+    case "Discrepancy":
+      return "bg-red-100 text-red-700";
+    default:
+      return "bg-gray-100 text-gray-700";
+  }
+};
 
 function InvoicePage() {
+  const navigate = useNavigate();
   const [keyword, setKeyword] = useState("");
   const [selectedStatus, setSelectedStatus] = useState(null);
+  const [invoices, setInvoices] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState("");
   const [showStatusDropdown, setShowStatusDropdown] = useState(false);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
@@ -72,12 +59,41 @@ function InvoicePage() {
     return () => document.removeEventListener("mousedown", handleOutsideClick);
   }, []);
 
+  useEffect(() => {
+    const loadInvoices = async () => {
+      setIsLoading(true);
+      setError("");
+      try {
+        const res = await invoiceApi.getAll();
+        setInvoices(res.data || []);
+      } catch (err) {
+        const message =
+          typeof err?.response?.data === "string"
+            ? err.response.data
+            : "Failed to load invoices.";
+        setError(message);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadInvoices();
+  }, []);
+
   const stats = useMemo(() => {
-    const byStatus = (status) =>
-      invoicesData.filter((invoice) => invoice.status === status).length;
+    const byStatus = (status) => {
+      if (status === "Completed") {
+        return invoices.filter(
+          (invoice) =>
+            invoice.status === "Completed" || invoice.status === "Verified",
+        ).length;
+      }
+
+      return invoices.filter((invoice) => invoice.status === status).length;
+    };
 
     return [
-      { label: "Total Invoices", value: invoicesData.length, status: null },
+      { label: "Total Invoices", value: invoices.length, status: null },
       { label: "Pending", value: byStatus("Pending"), status: "Pending" },
       {
         label: "Discrepancy",
@@ -90,15 +106,34 @@ function InvoicePage() {
         value: byStatus("Completed"),
         status: "Completed",
       },
+      {
+        label: "Voided",
+        value: byStatus("Voided"),
+        status: "Voided",
+      },
     ];
-  }, []);
+  }, [invoices]);
 
-  const statusOptions = ["All Status", "Pending", "Discrepancy", "Completed"];
+  const statusOptions = [
+    "All Status",
+    "Pending",
+    "Discrepancy",
+    "Completed",
+    "Voided",
+  ];
 
   const filteredInvoices = useMemo(() => {
     const baseData = selectedStatus
-      ? invoicesData.filter((invoice) => invoice.status === selectedStatus)
-      : invoicesData;
+      ? invoices.filter((invoice) => {
+          if (selectedStatus === "Completed") {
+            return (
+              invoice.status === "Completed" || invoice.status === "Verified"
+            );
+          }
+
+          return invoice.status === selectedStatus;
+        })
+      : invoices;
 
     const normalizedKeyword = keyword.trim().toLowerCase();
     if (!normalizedKeyword) return baseData;
@@ -106,17 +141,14 @@ function InvoicePage() {
     return baseData.filter(
       (invoice) =>
         invoice.invoiceNumber.toLowerCase().includes(normalizedKeyword) ||
-        invoice.supplier.toLowerCase().includes(normalizedKeyword) ||
-        invoice.poNumber.toLowerCase().includes(normalizedKeyword),
+        (invoice.supplierName || "")
+          .toLowerCase()
+          .includes(normalizedKeyword) ||
+        (invoice.purchaseOrderNumber || "")
+          .toLowerCase()
+          .includes(normalizedKeyword),
     );
-  }, [keyword, selectedStatus]);
-
-  const getStatusClassName = (status) => {
-    if (status === "Pending") return "bg-amber-100 text-amber-700";
-    if (status === "Discrepancy") return "bg-red-100 text-red-700";
-    if (status === "Completed") return "bg-blue-100 text-blue-700";
-    return "bg-gray-100 text-gray-700";
-  };
+  }, [invoices, keyword, selectedStatus]);
 
   const handleFileSelect = (event) => {
     const file = event.target.files?.[0] || null;
@@ -146,7 +178,7 @@ function InvoicePage() {
         </button>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-5 gap-4 mb-6">
         <button
           onClick={() => setSelectedStatus(null)}
           className={`bg-white border rounded-lg p-4 text-left transition-all ${
@@ -214,6 +246,23 @@ function InvoicePage() {
             <FileText size={20} className="text-green-600" />
           </div>
         </button>
+
+        <button
+          onClick={() => setSelectedStatus("Voided")}
+          className={`bg-white border rounded-lg p-4 text-left transition-all ${
+            selectedStatus === "Voided"
+              ? "border-blue-500 ring-2 ring-blue-200"
+              : "border-gray-200 hover:border-gray-300"
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-[10px] text-gray-500">Voided</p>
+              <p className="text-gray-600 mt-1">{stats[4].value}</p>
+            </div>
+            <FileText size={20} className="text-gray-600" />
+          </div>
+        </button>
       </div>
 
       <div className="bg-white border border-gray-200 rounded-lg">
@@ -227,7 +276,7 @@ function InvoicePage() {
               />
               <input
                 type="text"
-                placeholder="Search by invoice number, supplier, or PO number..."
+                placeholder="Search by Invoice No., Supplier, or PO Number..."
                 className="w-full pl-9 pr-3 py-1.5 border border-gray-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-gray-200"
                 value={keyword}
                 onChange={(event) => setKeyword(event.target.value)}
@@ -245,7 +294,7 @@ function InvoicePage() {
               </button>
 
               {showStatusDropdown && (
-                <div className="absolute right-0 mt-1 w-40 bg-white border border-gray-300 rounded-lg shadow-lg z-10 py-1">
+                <div className="absolute right-0 mt-1 w-40 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
                   {statusOptions.map((status) => {
                     const isAll = status === "All Status";
                     const isActive =
@@ -255,10 +304,16 @@ function InvoicePage() {
                       <button
                         key={status}
                         type="button"
-                        className={`w-full px-3 py-1.5 text-left text-xs transition-colors ${
+                        className={`w-full px-3 py-2 text-left text-xs transition-colors ${
                           isActive
                             ? "bg-gray-100 text-gray-900"
                             : "text-gray-700 hover:bg-gray-50"
+                        } ${
+                          status === statusOptions[0]
+                            ? "rounded-t-lg"
+                            : status === statusOptions[statusOptions.length - 1]
+                              ? "rounded-b-lg"
+                              : ""
                         }`}
                         onClick={() => {
                           setSelectedStatus(isAll ? null : status);
@@ -300,7 +355,19 @@ function InvoicePage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {!filteredInvoices.length ? (
+              {isLoading ? (
+                <tr>
+                  <td colSpan={6} className="px-5 py-6 text-xs text-gray-500">
+                    Loading invoices...
+                  </td>
+                </tr>
+              ) : error ? (
+                <tr>
+                  <td colSpan={6} className="px-5 py-6 text-xs text-red-700">
+                    {error}
+                  </td>
+                </tr>
+              ) : !filteredInvoices.length ? (
                 <tr>
                   <td colSpan={6} className="px-5 py-6 text-xs text-gray-500">
                     No invoices found.
@@ -311,28 +378,32 @@ function InvoicePage() {
                   <tr
                     key={invoice.id}
                     className="hover:bg-gray-50 cursor-pointer transition-colors"
+                    onClick={() =>
+                      navigate(`/procurement/invoice/${invoice.id}`, {
+                        state: { invoice },
+                      })
+                    }
                   >
                     <td className="px-5 py-3 text-xs text-gray-900 align-middle">
                       {invoice.invoiceNumber}
                     </td>
                     <td className="px-5 py-3 text-xs text-gray-900 align-middle">
-                      {invoice.supplier}
+                      {invoice.supplierName}
                     </td>
                     <td className="px-5 py-3 text-xs text-gray-900 align-middle">
-                      {invoice.poNumber}
+                      {invoice.purchaseOrderNumber}
                     </td>
                     <td className="px-5 py-3 text-xs text-gray-900 align-middle">
-                      {invoice.date}
+                      {formatDate(invoice.invoiceDate)}
                     </td>
                     <td className="px-5 py-3 text-xs text-gray-900 align-middle">
-                      ${invoice.amount}
+                      ${Number(invoice.totalAmount || 0).toFixed(2)}
                     </td>
                     <td className="px-5 py-3 align-middle">
                       <StatusBadge
-                        label={invoice.status}
+                        label={getDisplayStatus(invoice.status)}
                         toneClass={getStatusClassName(invoice.status)}
                         widthClass="min-w-[140px]"
-                        textClass="text-xs"
                       />
                     </td>
                   </tr>

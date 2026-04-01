@@ -135,7 +135,10 @@ function PurchaseOrderDetailsPage() {
       {
         id: "completed",
         label: "Completed",
-        status: makeState(completedFinished, completedInProgressStatuses.includes(status)),
+        status: makeState(
+          completedFinished,
+          completedInProgressStatuses.includes(status),
+        ),
       },
     ];
   }, [order]);
@@ -186,7 +189,9 @@ function PurchaseOrderDetailsPage() {
   const orderComparisons = useMemo(
     () =>
       orderedItems.map((orderedItem) => {
-        const receipt = receivedItems.find((item) => item.name === orderedItem.name);
+        const receipt = receivedItems.find(
+          (item) => item.name === orderedItem.name,
+        );
 
         if (!receipt) {
           return {
@@ -220,7 +225,9 @@ function PurchaseOrderDetailsPage() {
     () =>
       receivedItems.filter(
         (receivedItem) =>
-          !orderedItems.find((orderedItem) => orderedItem.name === receivedItem.name),
+          !orderedItems.find(
+            (orderedItem) => orderedItem.name === receivedItem.name,
+          ),
       ),
     [orderedItems, receivedItems],
   );
@@ -405,7 +412,9 @@ function PurchaseOrderDetailsPage() {
                   >
                     <div className="flex-1">
                       <div className="mb-2">
-                        <span className="text-xs text-gray-500 italic">Not in order</span>
+                        <span className="text-xs text-gray-500 italic">
+                          Not in order
+                        </span>
                       </div>
                       <div className="flex justify-between text-xs text-gray-500">
                         <span>Ordered Qty:</span>
@@ -441,10 +450,17 @@ function PurchaseOrderDetailsPage() {
                           <div className="flex-1">
                             <div className="flex items-start justify-between mb-2">
                               <div className="flex items-center gap-2 flex-1">
-                                <span className="text-xs text-gray-500">{comparison.name}</span>
-                                <span className="text-xs text-gray-600">Not received</span>
+                                <span className="text-xs text-gray-500">
+                                  {comparison.name}
+                                </span>
+                                <span className="text-xs text-gray-600">
+                                  Not received
+                                </span>
                               </div>
-                              <XCircle className="text-gray-400 flex-shrink-0" size={20} />
+                              <XCircle
+                                className="text-gray-400 flex-shrink-0"
+                                size={20}
+                              />
                             </div>
                             <div className="flex justify-between text-xs text-gray-500">
                               <span>Received Qty:</span>
@@ -474,7 +490,8 @@ function PurchaseOrderDetailsPage() {
                               </span>
                               {!isMatch && (
                                 <span className="text-xs text-red-700">
-                                  Short {comparison.orderedQty - item.quantity} units
+                                  Short {comparison.orderedQty - item.quantity}{" "}
+                                  units
                                 </span>
                               )}
                             </div>
@@ -507,10 +524,17 @@ function PurchaseOrderDetailsPage() {
                       <div className="flex-1">
                         <div className="flex items-start justify-between mb-2">
                           <div className="flex items-center gap-2 flex-1">
-                            <span className="text-xs text-gray-900">{item.name}</span>
-                            <span className="text-xs text-orange-700">Not in order</span>
+                            <span className="text-xs text-gray-900">
+                              {item.name}
+                            </span>
+                            <span className="text-xs text-orange-700">
+                              Not in order
+                            </span>
                           </div>
-                          <XCircle className="text-orange-500 flex-shrink-0" size={20} />
+                          <XCircle
+                            className="text-orange-500 flex-shrink-0"
+                            size={20}
+                          />
                         </div>
                         <div className="flex justify-between text-xs text-gray-700">
                           <span>Received Qty:</span>
