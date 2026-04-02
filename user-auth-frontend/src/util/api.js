@@ -50,6 +50,17 @@ export const purchaseOrderApi = {
   create: (payload) => api.post("/PurchaseOrders", payload),
 };
 
+export const inventoryApi = {
+  getAll: (keyword) =>
+    api.get("/Medicines", { params: keyword ? { keyword } : {} }),
+  getById: (id) => api.get(`/Medicines/${id}`),
+  create: (payload) => api.post("/Medicines", payload),
+  update: (id, payload) => api.put(`/Medicines/${id}`, payload),
+  markExpiredProcessed: (id) =>
+    api.post(`/Medicines/${id}/mark-expired-processed`),
+  delete: (id) => api.delete(`/Medicines/${id}`),
+};
+
 export const invoiceApi = {
   getAll: ({ keyword, status } = {}) =>
     api.get("/Invoices", {
