@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 using UserAuthApi.Data;
 using UserAuthApi.Models;
@@ -182,6 +183,11 @@ namespace UserAuthApi.Controllers
         [HttpPut("{orderNumber}/status")]
         public IActionResult UpdateStatus(string orderNumber, UpdatePurchaseOrderStatusDto dto)
         {
+            if (!User.IsInRole("Admin"))
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, "Only manager can approve or reject purchase orders.");
+            }
+
             if (string.IsNullOrWhiteSpace(orderNumber))
             {
                 return BadRequest("Order number is required.");
@@ -224,6 +230,138 @@ namespace UserAuthApi.Controllers
                 order.Status,
                 order.Notes
             });
+        }
+
+        [HttpPut("{orderNumber}/resubmit")]
+        public IActionResult ResubmitRejected(string orderNumber, ResubmitPurchaseOrderDto dto)
+        {
+            if (string.IsNullOrWhiteSpace(orderNumber))
+            {
+                return BadRequest("Order number is required.");
+            }
+
+            var currentUserId = GetCurrentUserId();
+            if (!currentUserId.HasValue)
+            {
+                return Unauthorized("Invalid token.");
+            }
+
+            var normalizedOrderNumber = orderNumber.Trim();
+            var order = _context.PurchaseOrders
+                .Include(po => po.Items)
+                .FirstOrDefault(po => po.OrderNumber == normalizedOrderNumber);
+
+            if (order == null)
+            {
+                return NotFound("Purchase order not found.");
+            }
+
+            var isAdmin = User.IsInRole("Admin");
+            var isOwner = order.CreatedByUserId.HasValue && order.CreatedByUserId.Value == currentUserId.Value;
+
+            if (!isAdmin && !isOwner)
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, "You can only resubmit your own rejected order.");
+            }
+
+            if (order.Status != "Rejected")
+            {
+                return BadRequest("Only rejected orders can be resubmitted.");
+            }
+
+            if (dto.Items == null || dto.Items.Count == 0)
+            {
+                return BadRequest("At least one purchase order item is required.");
+            }
+
+            if (dto.SupplierId.HasValue)
+            {
+                var supplier = _context.Suppliers.FirstOrDefault(s => s.Id == dto.SupplierId.Value);
+                if (supplier == null)
+                {
+                    return BadRequest("Supplier does not exist.");
+                }
+
+                order.SupplierId = dto.SupplierId.Value;
+            }
+
+            var medicationIds = dto.Items
+                .Where(i => i.MedicationId.HasValue)
+                .Select(i => i.MedicationId!.Value)
+                .Distinct()
+                .ToList();
+
+            var existingMedicationIds = _context.Medications
+                .Where(m => medicationIds.Contains(m.Id))
+                .Select(m => m.Id)
+                .ToHashSet();
+
+            var missingMedicationId = medicationIds.FirstOrDefault(id => !existingMedicationIds.Contains(id));
+            if (missingMedicationId != 0)
+            {
+                return BadRequest($"Medication {missingMedicationId} does not exist.");
+            }
+
+            _context.PurchaseOrderItems.RemoveRange(order.Items);
+            order.Items = dto.Items.Select(i => new PurchaseOrderItem
+            {
+                MedicationId = i.MedicationId,
+                Description = i.Description.Trim(),
+                QuantityOrdered = i.QuantityOrdered,
+                QuantityReceived = 0
+            }).ToList();
+
+            order.Status = "Pending Review";
+            order.OrderDate = DateTime.UtcNow;
+            order.Notes = string.IsNullOrWhiteSpace(dto.Notes) ? null : dto.Notes.Trim();
+
+            _context.SaveChanges();
+
+            return Ok(new
+            {
+                order.Id,
+                order.OrderNumber,
+                order.Status,
+                order.SupplierId,
+                order.OrderDate,
+                order.Notes,
+                ItemCount = order.Items.Count,
+                QuantityOrderedTotal = order.Items.Sum(i => i.QuantityOrdered)
+            });
+        }
+
+        [HttpDelete("{orderNumber}")]
+        public IActionResult DeleteByOrderNumber(string orderNumber)
+        {
+            if (string.IsNullOrWhiteSpace(orderNumber))
+            {
+                return BadRequest("Order number is required.");
+            }
+
+            var currentUserId = GetCurrentUserId();
+            if (!currentUserId.HasValue)
+            {
+                return Unauthorized("Invalid token.");
+            }
+
+            var order = _context.PurchaseOrders.FirstOrDefault(po => po.OrderNumber == orderNumber.Trim());
+            if (order == null)
+            {
+                return NotFound("Purchase order not found.");
+            }
+
+            var isAdmin = User.IsInRole("Admin");
+            var isOwner = order.CreatedByUserId.HasValue && order.CreatedByUserId.Value == currentUserId.Value;
+
+            if (!isAdmin && !(isOwner && order.Status == "Rejected"))
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, "Only manager can delete orders. Users can delete only their own rejected orders.");
+            }
+
+            _context.PurchaseOrders.Remove(order);
+            _context.SaveChanges();
+
+            return Ok(new { message = "Purchase order deleted successfully." });
         }
 
         private int? GetCurrentUserId()

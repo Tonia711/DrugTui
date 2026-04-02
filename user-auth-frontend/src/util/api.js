@@ -52,6 +52,13 @@ export const purchaseOrderApi = {
       `/PurchaseOrders/${encodeURIComponent(orderNumber)}/status`,
       payload,
     ),
+  resubmit: (orderNumber, payload) =>
+    api.put(
+      `/PurchaseOrders/${encodeURIComponent(orderNumber)}/resubmit`,
+      payload,
+    ),
+  delete: (orderNumber) =>
+    api.delete(`/PurchaseOrders/${encodeURIComponent(orderNumber)}`),
   create: (payload) => api.post("/PurchaseOrders", payload),
 };
 
