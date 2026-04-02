@@ -29,7 +29,7 @@ const mapItemToForm = (data) => ({
   barcode: "",
   medsafeNo: "",
   dosageForm: inferDosageForm(
-    data?.quantity || `${data?.stockQuantity ?? 0} ${data?.unit || ""}`
+    data?.quantity || `${data?.stockQuantity ?? 0} ${data?.unit || ""}`,
   ),
   unit: data?.unit || "box",
   quantity: data?.quantity || `${data?.stockQuantity ?? 0} ${data?.unit || ""}`,
@@ -124,7 +124,8 @@ function ItemDetailsPage() {
       setMessage("Expired medication marked as processed.");
     } catch (err) {
       setErrorMessage(
-        err?.response?.data || "Failed to mark expired medication as processed."
+        err?.response?.data ||
+          "Failed to mark expired medication as processed.",
       );
     } finally {
       setIsMarkingProcessed(false);

@@ -53,24 +53,30 @@ function InventoryPage() {
       setError("");
       try {
         const res = await inventoryApi.getAll();
-        const mapped = (Array.isArray(res.data) ? res.data : []).map((item) => ({
-          id: item.id,
-          drugName: item.name || "-",
-          genericName: item.genericName || item.name || "-",
-          batchNumber: item.batchNumber || "-",
-          quantity: item.quantity || `${item.stockQuantity ?? 0} ${item.unit || ""}`.trim(),
-          expiryDate: item.expiryDate ? new Date(item.expiryDate).toISOString().slice(0, 10) : "-",
-          storage: item.storage || "-",
-          location: item.location || "-",
-          status: item.status || "In Stock",
-          statusColor: item.statusColor || "bg-green-100 text-green-700",
-          isExpiredProcessed: Boolean(item.isExpiredProcessed),
-          unit: item.unit,
-          stockQuantity: item.stockQuantity,
-          reorderLevel: item.reorderLevel,
-          supplier: item.supplier,
-          notes: item.notes,
-        }));
+        const mapped = (Array.isArray(res.data) ? res.data : []).map(
+          (item) => ({
+            id: item.id,
+            drugName: item.name || "-",
+            genericName: item.genericName || item.name || "-",
+            batchNumber: item.batchNumber || "-",
+            quantity:
+              item.quantity ||
+              `${item.stockQuantity ?? 0} ${item.unit || ""}`.trim(),
+            expiryDate: item.expiryDate
+              ? new Date(item.expiryDate).toISOString().slice(0, 10)
+              : "-",
+            storage: item.storage || "-",
+            location: item.location || "-",
+            status: item.status || "In Stock",
+            statusColor: item.statusColor || "bg-green-100 text-green-700",
+            isExpiredProcessed: Boolean(item.isExpiredProcessed),
+            unit: item.unit,
+            stockQuantity: item.stockQuantity,
+            reorderLevel: item.reorderLevel,
+            supplier: item.supplier,
+            notes: item.notes,
+          }),
+        );
         setMedicines(mapped);
       } catch (err) {
         setError(err?.response?.data || "Failed to load inventory.");
@@ -119,8 +125,12 @@ function InventoryPage() {
         drugName: item.name || "-",
         genericName: item.genericName || item.name || "-",
         batchNumber: item.batchNumber || "-",
-        quantity: item.quantity || `${item.stockQuantity ?? 0} ${item.unit || ""}`.trim(),
-        expiryDate: item.expiryDate ? new Date(item.expiryDate).toISOString().slice(0, 10) : "-",
+        quantity:
+          item.quantity ||
+          `${item.stockQuantity ?? 0} ${item.unit || ""}`.trim(),
+        expiryDate: item.expiryDate
+          ? new Date(item.expiryDate).toISOString().slice(0, 10)
+          : "-",
         storage: item.storage || "-",
         location: item.location || "-",
         status: item.status || "In Stock",
@@ -172,7 +182,7 @@ function InventoryPage() {
     nearExpiry: inventoryData.filter((item) => item.status === "Near Expiry")
       .length,
     expired: inventoryData.filter(
-      (item) => item.status === "Expired" && !item.isExpiredProcessed
+      (item) => item.status === "Expired" && !item.isExpiredProcessed,
     ).length,
   };
 
