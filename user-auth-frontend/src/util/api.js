@@ -47,6 +47,11 @@ export const purchaseOrderApi = {
     api.get("/PurchaseOrders", { params: keyword ? { keyword } : {} }),
   getByOrderNumber: (orderNumber) =>
     api.get(`/PurchaseOrders/${encodeURIComponent(orderNumber)}`),
+  updateStatus: (orderNumber, payload) =>
+    api.put(
+      `/PurchaseOrders/${encodeURIComponent(orderNumber)}/status`,
+      payload,
+    ),
   create: (payload) => api.post("/PurchaseOrders", payload),
 };
 

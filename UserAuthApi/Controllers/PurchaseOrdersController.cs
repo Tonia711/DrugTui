@@ -179,6 +179,53 @@ namespace UserAuthApi.Controllers
             });
         }
 
+        [HttpPut("{orderNumber}/status")]
+        public IActionResult UpdateStatus(string orderNumber, UpdatePurchaseOrderStatusDto dto)
+        {
+            if (string.IsNullOrWhiteSpace(orderNumber))
+            {
+                return BadRequest("Order number is required.");
+            }
+
+            var targetStatus = dto.Status?.Trim() ?? string.Empty;
+            if (targetStatus != "Approved/Ordered" && targetStatus != "Rejected")
+            {
+                return BadRequest("Status must be Approved/Ordered or Rejected.");
+            }
+
+            var order = _context.PurchaseOrders.FirstOrDefault(po => po.OrderNumber == orderNumber.Trim());
+            if (order == null)
+            {
+                return NotFound("Purchase order not found.");
+            }
+
+            if (order.Status != "Pending Review")
+            {
+                return BadRequest("Only Pending Review orders can be updated from this screen.");
+            }
+
+            if (targetStatus == "Rejected" && string.IsNullOrWhiteSpace(dto.RejectionComment))
+            {
+                return BadRequest("Rejection comment is required.");
+            }
+
+            order.Status = targetStatus;
+            if (targetStatus == "Rejected")
+            {
+                order.Notes = dto.RejectionComment!.Trim();
+            }
+
+            _context.SaveChanges();
+
+            return Ok(new
+            {
+                order.Id,
+                order.OrderNumber,
+                order.Status,
+                order.Notes
+            });
+        }
+
         private int? GetCurrentUserId()
         {
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);

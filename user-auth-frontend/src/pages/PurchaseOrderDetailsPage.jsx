@@ -45,6 +45,8 @@ function PurchaseOrderDetailsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const [rejectionComment, setRejectionComment] = useState("");
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+  const [actionMessage, setActionMessage] = useState("");
 
   useEffect(() => {
     const load = async () => {
@@ -56,6 +58,7 @@ function PurchaseOrderDetailsPage() {
 
       setIsLoading(true);
       setError("");
+      setActionMessage("");
       try {
         const fromState = location.state?.order || null;
         if (fromState && fromState.orderNumber === orderId) {
@@ -77,6 +80,62 @@ function PurchaseOrderDetailsPage() {
 
     load();
   }, [location.state, orderId]);
+
+  const canReview = order?.status === "Pending Review";
+
+  const refreshOrder = async () => {
+    if (!orderId) return;
+    const res = await purchaseOrderApi.getByOrderNumber(orderId);
+    setOrder(res.data || null);
+  };
+
+  const handleApprove = async () => {
+    if (!orderId || !canReview) return;
+
+    setError("");
+    setActionMessage("");
+    try {
+      setIsUpdatingStatus(true);
+      await purchaseOrderApi.updateStatus(orderId, {
+        status: "Approved/Ordered",
+      });
+      await refreshOrder();
+      setActionMessage("Order approved successfully.");
+    } catch (err) {
+      const message =
+        typeof err?.response?.data === "string"
+          ? err.response.data
+          : "Failed to approve order.";
+      setError(message);
+    } finally {
+      setIsUpdatingStatus(false);
+    }
+  };
+
+  const handleReject = async () => {
+    if (!orderId || !canReview) return;
+    if (!rejectionComment.trim()) return;
+
+    setError("");
+    setActionMessage("");
+    try {
+      setIsUpdatingStatus(true);
+      await purchaseOrderApi.updateStatus(orderId, {
+        status: "Rejected",
+        rejectionComment: rejectionComment.trim(),
+      });
+      await refreshOrder();
+      setActionMessage("Order rejected successfully.");
+    } catch (err) {
+      const message =
+        typeof err?.response?.data === "string"
+          ? err.response.data
+          : "Failed to reject order.";
+      setError(message);
+    } finally {
+      setIsUpdatingStatus(false);
+    }
+  };
 
   const progressSteps = useMemo(() => {
     if (!order) {
@@ -585,36 +644,48 @@ function PurchaseOrderDetailsPage() {
             )}
           </div>
 
-          <div className="bg-white rounded-lg border border-gray-200 p-6">
-            <label className="block mb-2 text-xs text-gray-700">
-              Rejection Comment
-            </label>
-            <textarea
-              value={rejectionComment}
-              onChange={(event) => setRejectionComment(event.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg text-xs text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[100px]"
-              placeholder="Enter reason for rejection..."
-            />
+          {canReview && (
+            <div className="bg-white rounded-lg border border-gray-200 p-6">
+              <label className="block mb-2 text-xs text-gray-700">
+                Rejection Comment
+              </label>
+              <textarea
+                value={rejectionComment}
+                onChange={(event) => setRejectionComment(event.target.value)}
+                disabled={isUpdatingStatus}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg text-xs text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[100px]"
+                placeholder="Enter reason for rejection..."
+              />
 
-            <div className="mt-4 flex gap-3">
-              <button
-                type="button"
-                className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-xs"
-              >
-                <CheckCircle size={20} />
-                <span>Approve</span>
-              </button>
+              {actionMessage && (
+                <p className="mt-3 text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2">
+                  {actionMessage}
+                </p>
+              )}
 
-              <button
-                type="button"
-                disabled={!rejectionComment.trim()}
-                className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed text-xs"
-              >
-                <XCircle size={20} />
-                <span>Reject</span>
-              </button>
+              <div className="mt-4 flex gap-3">
+                <button
+                  type="button"
+                  onClick={handleApprove}
+                  disabled={isUpdatingStatus}
+                  className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-xs"
+                >
+                  <CheckCircle size={20} />
+                  <span>{isUpdatingStatus ? "Processing..." : "Approve"}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleReject}
+                  disabled={!rejectionComment.trim() || isUpdatingStatus}
+                  className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed text-xs"
+                >
+                  <XCircle size={20} />
+                  <span>{isUpdatingStatus ? "Processing..." : "Reject"}</span>
+                </button>
+              </div>
             </div>
-          </div>
+          )}
         </>
       )}
     </div>
