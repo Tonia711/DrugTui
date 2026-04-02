@@ -7,7 +7,9 @@ import HomePage from "./pages/HomePage";
 import InventoryPage from "./pages/InventoryPage";
 import ItemDetailsPage from "./pages/ItemDetailsPage";
 import PurchaseOrderPage from "./pages/PurchaseOrderPage";
+import PurchaseOrderCreatePage from "./pages/PurchaseOrderCreatePage";
 import PurchaseOrderDetailsPage from "./pages/PurchaseOrderDetailsPage";
+import PurchaseOrderResubmitPage from "./pages/PurchaseOrderResubmitPage";
 import InvoicePage from "./pages/InvoicePage";
 import InvoiceDetailsPage from "./pages/InvoiceDetailsPage";
 import DepartmentRequestPage from "./pages/DepartmentRequestPage";
@@ -41,8 +43,16 @@ function App() {
           element={<PurchaseOrderPage />}
         />
         <Route
+          path="procurement/purchase-order/new"
+          element={<PurchaseOrderCreatePage />}
+        />
+        <Route
           path="procurement/purchase-order/:orderId"
           element={<PurchaseOrderDetailsPage />}
+        />
+        <Route
+          path="procurement/purchase-order/:orderId/resubmit"
+          element={<PurchaseOrderResubmitPage />}
         />
         <Route path="procurement/invoice" element={<InvoicePage />} />
         <Route

@@ -6,10 +6,11 @@ import {
   Check,
   CheckCircle,
   Package,
+  Trash2,
   XCircle,
 } from "lucide-react";
 import StatusBadge from "../components/StatusBadge";
-import { purchaseOrderApi } from "../util/api";
+import api, { purchaseOrderApi } from "../util/api";
 
 const formatDateTime = (value) => {
   if (!value) return "-";
@@ -47,6 +48,20 @@ function PurchaseOrderDetailsPage() {
   const [rejectionComment, setRejectionComment] = useState("");
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [actionMessage, setActionMessage] = useState("");
+  const [currentUser, setCurrentUser] = useState(null);
+
+  useEffect(() => {
+    const loadCurrentUser = async () => {
+      try {
+        const res = await api.get("/Users/me");
+        setCurrentUser(res.data || null);
+      } catch {
+        setCurrentUser(null);
+      }
+    };
+
+    loadCurrentUser();
+  }, []);
 
   useEffect(() => {
     const load = async () => {
@@ -58,7 +73,7 @@ function PurchaseOrderDetailsPage() {
 
       setIsLoading(true);
       setError("");
-      setActionMessage("");
+      setActionMessage(location.state?.message || "");
       try {
         const fromState = location.state?.order || null;
         if (fromState && fromState.orderNumber === orderId) {
@@ -81,7 +96,14 @@ function PurchaseOrderDetailsPage() {
     load();
   }, [location.state, orderId]);
 
-  const canReview = order?.status === "Pending Review";
+  const isManager = currentUser?.role === "Admin";
+  const isOwner =
+    !!currentUser?.id &&
+    !!order?.createdByUserId &&
+    Number(currentUser.id) === Number(order.createdByUserId);
+  const canReview = isManager && order?.status === "Pending Review";
+  const canResubmitRejected =
+    order?.status === "Rejected" && (isOwner || isManager);
 
   const refreshOrder = async () => {
     if (!orderId) return;
@@ -114,7 +136,11 @@ function PurchaseOrderDetailsPage() {
 
   const handleReject = async () => {
     if (!orderId || !canReview) return;
-    if (!rejectionComment.trim()) return;
+    if (!rejectionComment.trim()) {
+      setError("Please enter a rejection comment before rejecting this order.");
+      setActionMessage("");
+      return;
+    }
 
     setError("");
     setActionMessage("");
@@ -137,12 +163,40 @@ function PurchaseOrderDetailsPage() {
     }
   };
 
+  const handleDeleteOrder = async () => {
+    if (!orderId || !canResubmitRejected) return;
+    const confirmed = window.confirm(
+      "Delete this rejected order permanently? This cannot be undone.",
+    );
+    if (!confirmed) return;
+
+    setError("");
+    setActionMessage("");
+    try {
+      setIsUpdatingStatus(true);
+      await purchaseOrderApi.delete(orderId);
+      navigate("/procurement/purchase-order", {
+        replace: true,
+        state: { message: "Purchase order deleted successfully." },
+      });
+    } catch (err) {
+      const message =
+        typeof err?.response?.data === "string"
+          ? err.response.data
+          : "Failed to delete order.";
+      setError(message);
+    } finally {
+      setIsUpdatingStatus(false);
+    }
+  };
+
   const progressSteps = useMemo(() => {
     if (!order) {
       return [];
     }
 
     const status = order.status;
+    const isRejected = status === "Rejected";
     const approvedStatuses = [
       "Approved/Ordered",
       "Partially Received",
@@ -159,8 +213,7 @@ function PurchaseOrderDetailsPage() {
     const completedStatuses = ["Invoice Matched"];
     const completedInProgressStatuses = ["Invoice Mismatched"];
 
-    const approvedFinished =
-      approvedStatuses.includes(status) || status === "Rejected";
+    const approvedFinished = approvedStatuses.includes(status);
     const receivedFinished = receivedStatuses.includes(status);
     const completedFinished = completedStatuses.includes(status);
 
@@ -180,8 +233,10 @@ function PurchaseOrderDetailsPage() {
       },
       {
         id: "approved",
-        label: "Approved",
-        status: makeState(approvedFinished, status === "Pending Review"),
+        label: isRejected ? "Rejected" : "Approved",
+        status: isRejected
+          ? "rejected"
+          : makeState(approvedFinished, status === "Pending Review"),
       },
       {
         id: "received",
@@ -208,7 +263,7 @@ function PurchaseOrderDetailsPage() {
       (step) => step.status === "in-progress",
     );
     const finishedCount = progressSteps.filter(
-      (step) => step.status === "finished",
+      (step) => step.status === "finished" || step.status === "rejected",
     ).length;
     const targetStepIndex =
       inProgressIndex >= 0 ? inProgressIndex : finishedCount - 1;
@@ -368,18 +423,28 @@ function PurchaseOrderDetailsPage() {
                       className={`w-10 h-10 rounded-full flex items-center justify-center mb-2 z-10 transition-all ${
                         step.status === "finished"
                           ? "bg-blue-500 text-white"
-                          : "bg-white border-2 border-gray-300 text-gray-400"
+                          : step.status === "rejected"
+                            ? "bg-red-500 text-white"
+                            : "bg-white border-2 border-gray-300 text-gray-400"
                       }`}
                     >
                       {step.status === "finished" ? (
                         <Check size={20} />
+                      ) : step.status === "rejected" ? (
+                        <XCircle size={20} />
                       ) : (
                         <span className="text-xs">{index + 1}</span>
                       )}
                     </div>
 
                     <p
-                      className={`mb-1 text-center text-xs ${step.status === "waiting" ? "text-gray-400" : "text-gray-900"}`}
+                      className={`mb-1 text-center text-xs ${
+                        step.status === "waiting"
+                          ? "text-gray-400"
+                          : step.status === "rejected"
+                            ? "text-red-700"
+                            : "text-gray-900"
+                      }`}
                     >
                       {step.label}
                     </p>
@@ -399,6 +464,10 @@ function PurchaseOrderDetailsPage() {
 
                     {step.status === "waiting" && !step.person && (
                       <p className="text-xs text-gray-400">Waiting</p>
+                    )}
+
+                    {step.status === "rejected" && !step.person && (
+                      <p className="text-xs text-red-600">Rejected</p>
                     )}
                   </div>
                 ))}
@@ -677,11 +746,43 @@ function PurchaseOrderDetailsPage() {
                 <button
                   type="button"
                   onClick={handleReject}
-                  disabled={!rejectionComment.trim() || isUpdatingStatus}
+                  disabled={isUpdatingStatus}
                   className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed text-xs"
                 >
                   <XCircle size={20} />
                   <span>{isUpdatingStatus ? "Processing..." : "Reject"}</span>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {canResubmitRejected && (
+            <div className="bg-white rounded-lg border border-gray-200 p-6">
+              <h3 className="text-sm text-gray-900 mb-2">Rejected Order Actions</h3>
+              <p className="text-xs text-gray-500 mb-4">
+                You can modify this rejected order on a dedicated page and resubmit it, or delete it.
+              </p>
+              <div className="mt-4 flex gap-3">
+                <button
+                  type="button"
+                  onClick={() =>
+                    navigate(`/procurement/purchase-order/${orderId}/resubmit`)
+                  }
+                  disabled={isUpdatingStatus}
+                  className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-xs disabled:bg-gray-300 disabled:cursor-not-allowed"
+                >
+                  <CheckCircle size={18} />
+                  <span>Modify & Resubmit</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleDeleteOrder}
+                  disabled={isUpdatingStatus}
+                  className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-xs disabled:bg-gray-300 disabled:cursor-not-allowed"
+                >
+                  <Trash2 size={18} />
+                  <span>{isUpdatingStatus ? "Processing..." : "Delete Order"}</span>
                 </button>
               </div>
             </div>

@@ -1,18 +1,8 @@
 import { useMemo, useRef, useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { ChevronDown, Package, Plus, Search, X } from "lucide-react";
+import { useLocation, useNavigate } from "react-router-dom";
+import { ChevronDown, Package, Plus, Search } from "lucide-react";
 import StatusBadge from "../components/StatusBadge";
-import { purchaseOrderApi, supplierApi } from "../util/api";
-
-const initialCreateForm = {
-  orderNumber: "",
-  status: "Pending Review",
-  supplierId: "",
-  orderDate: "",
-  notes: "",
-  itemDescription: "",
-  itemQuantity: 1,
-};
+import { purchaseOrderApi } from "../util/api";
 
 const formatDateTime = (value) => {
   if (!value) return "-";
@@ -35,15 +25,12 @@ const getErrorMessage = (error, fallback) => {
 
 function PurchaseOrderPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [keyword, setKeyword] = useState("");
   const [selectedStatus, setSelectedStatus] = useState(null);
   const [showStatusDropdown, setShowStatusDropdown] = useState(false);
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [createForm, setCreateForm] = useState(initialCreateForm);
   const [orders, setOrders] = useState([]);
-  const [suppliers, setSuppliers] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const statusDropdownRef = useRef(null);
@@ -72,15 +59,6 @@ function PurchaseOrderPage() {
     }
   };
 
-  const loadSuppliers = async () => {
-    try {
-      const res = await supplierApi.getAll();
-      setSuppliers(Array.isArray(res.data) ? res.data : []);
-    } catch {
-      setSuppliers([]);
-    }
-  };
-
   useEffect(() => {
     const handleOutsideClick = (event) => {
       if (
@@ -97,8 +75,14 @@ function PurchaseOrderPage() {
 
   useEffect(() => {
     loadOrders();
-    loadSuppliers();
   }, []);
+
+  useEffect(() => {
+    if (location.state?.message) {
+      setMessage(location.state.message);
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [location.pathname, location.state, navigate]);
 
   const mappedOrders = useMemo(
     () =>
@@ -186,46 +170,6 @@ function PurchaseOrderPage() {
     );
   }, [keyword, selectedStatus, mappedOrders]);
 
-  const handleCreateOrder = async (event) => {
-    event.preventDefault();
-    setMessage("");
-    setError("");
-
-    if (!createForm.supplierId) {
-      setError("Please select a supplier.");
-      return;
-    }
-
-    setIsSubmitting(true);
-    try {
-      await purchaseOrderApi.create({
-        orderNumber: createForm.orderNumber.trim(),
-        status: createForm.status,
-        supplierId: Number(createForm.supplierId),
-        orderDate: createForm.orderDate
-          ? new Date(createForm.orderDate).toISOString()
-          : null,
-        notes: createForm.notes.trim() || null,
-        items: [
-          {
-            medicationId: null,
-            description: createForm.itemDescription.trim(),
-            quantityOrdered: Number(createForm.itemQuantity),
-          },
-        ],
-      });
-
-      setShowCreateModal(false);
-      setCreateForm(initialCreateForm);
-      setMessage("Purchase order created successfully.");
-      await loadOrders();
-    } catch (err) {
-      setError(getErrorMessage(err, "Failed to create purchase order."));
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
   const getStatusClassName = (status) => {
     if (status === "Invoice Matched") {
       return "bg-green-100 text-green-700";
@@ -248,7 +192,7 @@ function PurchaseOrderPage() {
         </div>
         <button
           type="button"
-          onClick={() => setShowCreateModal(true)}
+          onClick={() => navigate("/procurement/purchase-order/new")}
           className="flex items-center gap-2 bg-blue-600 text-white px-3 py-1.5 rounded-lg hover:bg-blue-700 transition-colors"
         >
           <Plus size={14} />
@@ -420,137 +364,6 @@ function PurchaseOrderPage() {
           </table>
         </div>
       </div>
-
-      {showCreateModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <form
-            onSubmit={handleCreateOrder}
-            className="bg-white rounded-lg shadow-xl max-w-lg w-full p-6"
-          >
-            <div className="flex items-center justify-between mb-5">
-              <h2 className="text-sm text-gray-900">Add New Purchase Order</h2>
-              <button
-                type="button"
-                onClick={() => setShowCreateModal(false)}
-                className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg"
-              >
-                <X size={16} />
-              </button>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <input
-                className="px-3 py-2 border border-gray-300 rounded-lg text-xs"
-                placeholder="Order Number"
-                value={createForm.orderNumber}
-                onChange={(e) =>
-                  setCreateForm((prev) => ({
-                    ...prev,
-                    orderNumber: e.target.value,
-                  }))
-                }
-                required
-              />
-              <select
-                className="px-3 py-2 border border-gray-300 rounded-lg text-xs"
-                value={createForm.status}
-                onChange={(e) =>
-                  setCreateForm((prev) => ({ ...prev, status: e.target.value }))
-                }
-              >
-                {statusOptions
-                  .filter((option) => option !== "All Status")
-                  .map((status) => (
-                    <option key={status} value={status}>
-                      {status}
-                    </option>
-                  ))}
-              </select>
-              <select
-                className="px-3 py-2 border border-gray-300 rounded-lg text-xs"
-                value={createForm.supplierId}
-                onChange={(e) =>
-                  setCreateForm((prev) => ({
-                    ...prev,
-                    supplierId: e.target.value,
-                  }))
-                }
-                required
-              >
-                <option value="">Select Supplier</option>
-                {suppliers.map((supplier) => (
-                  <option key={supplier.id} value={supplier.id}>
-                    {supplier.name}
-                  </option>
-                ))}
-              </select>
-              <input
-                type="datetime-local"
-                className="px-3 py-2 border border-gray-300 rounded-lg text-xs"
-                value={createForm.orderDate}
-                onChange={(e) =>
-                  setCreateForm((prev) => ({
-                    ...prev,
-                    orderDate: e.target.value,
-                  }))
-                }
-              />
-              <input
-                className="md:col-span-2 px-3 py-2 border border-gray-300 rounded-lg text-xs"
-                placeholder="Item Description"
-                value={createForm.itemDescription}
-                onChange={(e) =>
-                  setCreateForm((prev) => ({
-                    ...prev,
-                    itemDescription: e.target.value,
-                  }))
-                }
-                required
-              />
-              <input
-                type="number"
-                min="1"
-                className="px-3 py-2 border border-gray-300 rounded-lg text-xs"
-                placeholder="Item Quantity"
-                value={createForm.itemQuantity}
-                onChange={(e) =>
-                  setCreateForm((prev) => ({
-                    ...prev,
-                    itemQuantity: e.target.value,
-                  }))
-                }
-                required
-              />
-              <textarea
-                rows={3}
-                className="md:col-span-2 px-3 py-2 border border-gray-300 rounded-lg text-xs"
-                placeholder="Notes"
-                value={createForm.notes}
-                onChange={(e) =>
-                  setCreateForm((prev) => ({ ...prev, notes: e.target.value }))
-                }
-              />
-            </div>
-
-            <div className="flex gap-2 mt-4">
-              <button
-                type="button"
-                onClick={() => setShowCreateModal(false)}
-                className="flex-1 px-4 py-2 text-xs bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="flex-1 px-4 py-2 text-xs bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-60"
-              >
-                {isSubmitting ? "Creating..." : "Create Order"}
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
     </div>
   );
 }
