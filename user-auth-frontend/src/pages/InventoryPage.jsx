@@ -11,7 +11,7 @@ import {
   TrendingUp,
   XCircle,
 } from "lucide-react";
-import { inventoryData as designInventoryData } from "../data/inventoryData";
+import { inventoryApi } from "../util/api";
 import StatusBadge from "../components/StatusBadge";
 
 const initialCreateForm = {
@@ -36,8 +36,8 @@ function InventoryPage() {
   const [error, setError] = useState("");
   const statusDropdownRef = useRef(null);
 
-  const [medicines, setMedicines] = useState(designInventoryData);
-  const [isLoading, setIsLoading] = useState(false);
+  const [medicines, setMedicines] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   const statusOptions = [
     "All Status",
@@ -48,6 +48,39 @@ function InventoryPage() {
   ];
 
   useEffect(() => {
+    const loadMedicines = async () => {
+      setIsLoading(true);
+      setError("");
+      try {
+        const res = await inventoryApi.getAll();
+        const mapped = (Array.isArray(res.data) ? res.data : []).map((item) => ({
+          id: item.id,
+          drugName: item.name || "-",
+          genericName: item.genericName || item.name || "-",
+          batchNumber: item.batchNumber || "-",
+          quantity: item.quantity || `${item.stockQuantity ?? 0} ${item.unit || ""}`.trim(),
+          expiryDate: item.expiryDate ? new Date(item.expiryDate).toISOString().slice(0, 10) : "-",
+          storage: item.storage || "-",
+          location: item.location || "-",
+          status: item.status || "In Stock",
+          statusColor: item.statusColor || "bg-green-100 text-green-700",
+          isExpiredProcessed: Boolean(item.isExpiredProcessed),
+          unit: item.unit,
+          stockQuantity: item.stockQuantity,
+          reorderLevel: item.reorderLevel,
+          supplier: item.supplier,
+          notes: item.notes,
+        }));
+        setMedicines(mapped);
+      } catch (err) {
+        setError(err?.response?.data || "Failed to load inventory.");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadMedicines();
+
     const handleOutsideClick = (event) => {
       if (
         statusDropdownRef.current &&
@@ -67,40 +100,39 @@ function InventoryPage() {
     setError("");
 
     try {
-      const normalizedQuantity = Number(createForm.initialStock);
-      const displayQuantity = Number.isNaN(normalizedQuantity)
-        ? `0 ${createForm.unit}`
-        : `${normalizedQuantity} ${createForm.unit}`;
+      await inventoryApi.create({
+        name: createForm.name.trim(),
+        batchNumber: createForm.batchNumber.trim(),
+        unit: createForm.unit,
+        initialStock: Number(createForm.initialStock),
+        reorderLevel: Number(createForm.reorderLevel),
+        expiryDate: createForm.expiryDate
+          ? new Date(createForm.expiryDate).toISOString()
+          : null,
+        supplier: createForm.supplier.trim() || null,
+        notes: createForm.notes.trim() || null,
+      });
 
-      const nextId = medicines.length
-        ? Math.max(...medicines.map((item) => Number(item.id))) + 1
-        : 1;
-
-      const status =
-        normalizedQuantity <= Number(createForm.reorderLevel)
-          ? "Low stock"
-          : "In Stock";
-
-      const statusColor =
-        status === "Low stock"
-          ? "bg-black text-white"
-          : "bg-green-100 text-green-700";
-
-      setMedicines((prev) => [
-        {
-          id: nextId,
-          drugName: createForm.name,
-          genericName: createForm.name,
-          batchNumber: createForm.batchNumber,
-          quantity: displayQuantity,
-          expiryDate: createForm.expiryDate || "-",
-          storage: "Ambient",
-          location: "A-0-000",
-          status,
-          statusColor,
-        },
-        ...prev,
-      ]);
+      const res = await inventoryApi.getAll();
+      const mapped = (Array.isArray(res.data) ? res.data : []).map((item) => ({
+        id: item.id,
+        drugName: item.name || "-",
+        genericName: item.genericName || item.name || "-",
+        batchNumber: item.batchNumber || "-",
+        quantity: item.quantity || `${item.stockQuantity ?? 0} ${item.unit || ""}`.trim(),
+        expiryDate: item.expiryDate ? new Date(item.expiryDate).toISOString().slice(0, 10) : "-",
+        storage: item.storage || "-",
+        location: item.location || "-",
+        status: item.status || "In Stock",
+        statusColor: item.statusColor || "bg-green-100 text-green-700",
+        isExpiredProcessed: Boolean(item.isExpiredProcessed),
+        unit: item.unit,
+        stockQuantity: item.stockQuantity,
+        reorderLevel: item.reorderLevel,
+        supplier: item.supplier,
+        notes: item.notes,
+      }));
+      setMedicines(mapped);
 
       setCreateForm({
         ...createForm,
@@ -139,7 +171,9 @@ function InventoryPage() {
       .length,
     nearExpiry: inventoryData.filter((item) => item.status === "Near Expiry")
       .length,
-    expired: inventoryData.filter((item) => item.status === "Expired").length,
+    expired: inventoryData.filter(
+      (item) => item.status === "Expired" && !item.isExpiredProcessed
+    ).length,
   };
 
   const statCards = [

@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Edit2, Package, Save } from "lucide-react";
-import { inventoryData } from "../data/inventoryData";
+import { inventoryApi } from "../util/api";
 
 const inferUnitOfMeasure = (drugName) => {
   const value = (drugName || "").toLowerCase();
@@ -22,12 +22,37 @@ const inferDosageForm = (quantity) => {
   return "Tablet";
 };
 
+const mapItemToForm = (data) => ({
+  genericName: data?.genericName || "",
+  brandName: data?.name || "",
+  batchNumber: data?.batchNumber || "",
+  barcode: "",
+  medsafeNo: "",
+  dosageForm: inferDosageForm(
+    data?.quantity || `${data?.stockQuantity ?? 0} ${data?.unit || ""}`
+  ),
+  unit: data?.unit || "box",
+  quantity: data?.quantity || `${data?.stockQuantity ?? 0} ${data?.unit || ""}`,
+  expiryDate: data?.expiryDate ? String(data.expiryDate).slice(0, 10) : "",
+  storageCondition: data?.storage || "Ambient",
+  hazard: "No special handling",
+  location: data?.location || "",
+  supplier: data?.supplier || "",
+  notes: data?.notes || "",
+  reorderLevel: data?.reorderLevel ?? 0,
+});
+
 function ItemDetailsPage() {
   const navigate = useNavigate();
   const { itemId } = useParams();
   const [isEditing, setIsEditing] = useState(false);
+  const [item, setItem] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+  const [isMarkingProcessed, setIsMarkingProcessed] = useState(false);
   const [form, setForm] = useState({
     genericName: "",
     brandName: "",
@@ -46,49 +71,130 @@ function ItemDetailsPage() {
     reorderLevel: 0,
   });
 
-  const item = useMemo(
-    () => inventoryData.find((entry) => String(entry.id) === String(itemId)),
-    [itemId],
-  );
-
-  const isLoading = false;
-  const error = null;
-  const isSaving = false;
-
   useEffect(() => {
-    if (!item) return;
+    const loadItem = async () => {
+      if (!itemId) {
+        setError("Item ID is missing.");
+        setIsLoading(false);
+        return;
+      }
 
-    setForm({
-      genericName: item.genericName || "",
-      brandName: item.drugName || "",
-      batchNumber: item.batchNumber || "",
-      barcode: "",
-      medsafeNo: "",
-      dosageForm: inferDosageForm(item.quantity),
-      unit: inferUnitOfMeasure(item.drugName),
-      quantity: item.quantity || "",
-      expiryDate: item.expiryDate || "",
-      storageCondition: item.storage || "Ambient",
-      hazard: "No special handling",
-      location: item.location || "",
-      supplier: "",
-      notes: "",
-      reorderLevel: 0,
-    });
-  }, [item]);
+      setIsLoading(true);
+      setError("");
+
+      try {
+        const res = await inventoryApi.getById(itemId);
+        const data = res.data || null;
+        setItem(data);
+
+        if (data) {
+          setForm(mapItemToForm(data));
+        }
+      } catch (err) {
+        setError(err?.response?.data || "Failed to load item details.");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadItem();
+  }, [itemId]);
 
   const status = item?.status || "In Stock";
   const statusClassName = item?.statusColor || "bg-gray-100 text-gray-700";
+  const isExpiredProcessed = Boolean(item?.isExpiredProcessed);
 
-  const handleSave = async () => {
+  const handleMarkExpiredProcessed = async () => {
+    if (!itemId || status !== "Expired" || isExpiredProcessed) {
+      return;
+    }
+
     setMessage("");
     setErrorMessage("");
 
     try {
+      setIsMarkingProcessed(true);
+      await inventoryApi.markExpiredProcessed(itemId);
+      const refreshed = await inventoryApi.getById(itemId);
+      const data = refreshed.data || null;
+      setItem(data);
+      if (data) {
+        setForm(mapItemToForm(data));
+      }
+      setMessage("Expired medication marked as processed.");
+    } catch (err) {
+      setErrorMessage(
+        err?.response?.data || "Failed to mark expired medication as processed."
+      );
+    } finally {
+      setIsMarkingProcessed(false);
+    }
+  };
+
+  const handleSave = async () => {
+    setMessage("");
+    setErrorMessage("");
+    const brandName = form.brandName.trim();
+    const genericName = form.genericName.trim();
+    const batchNumber = form.batchNumber.trim();
+    const supplier = form.supplier.trim();
+    const location = form.location.trim();
+
+    if (!brandName) {
+      setErrorMessage("Brand Name is required.");
+      return;
+    }
+
+    if (!batchNumber) {
+      setErrorMessage("Batch is required.");
+      return;
+    }
+
+    const reorderLevel = Number(form.reorderLevel);
+    if (!Number.isFinite(reorderLevel) || reorderLevel < 0) {
+      setErrorMessage("Reorder level must be a valid non-negative number.");
+      return;
+    }
+
+    let expiryDate = null;
+    if (form.expiryDate && form.expiryDate.trim()) {
+      const parsed = new Date(form.expiryDate);
+      if (Number.isNaN(parsed.getTime())) {
+        setErrorMessage("Expiry Date format is invalid.");
+        return;
+      }
+      expiryDate = parsed.toISOString();
+    }
+
+    try {
+      setIsSaving(true);
+      await inventoryApi.update(itemId, {
+        name: brandName,
+        genericName: genericName || brandName,
+        batchNumber,
+        unit: form.unit || "box",
+        reorderLevel,
+        expiryDate,
+        supplier: supplier || null,
+        storage: form.storageCondition || null,
+        location: location || null,
+        notes: form.notes?.trim() || null,
+      });
+
+      const refreshed = await inventoryApi.getById(itemId);
+      const data = refreshed.data || null;
+      setItem(data);
+
+      if (data) {
+        setForm(mapItemToForm(data));
+      }
+
       setIsEditing(false);
       setMessage("Changes saved successfully.");
     } catch (err) {
-      setErrorMessage(err.response?.data || "Failed to update item.");
+      setErrorMessage(err?.response?.data || "Failed to update item.");
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -467,12 +573,27 @@ function ItemDetailsPage() {
 
         <div className="pt-6 border-t border-gray-200">
           <h3 className="text-sm text-gray-900 font-bold mb-4">Status</h3>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-col items-start gap-3">
             <span
               className={`inline-flex items-center justify-center px-3 py-1.5 rounded text-xs ${statusClassName}`}
             >
               {status}
             </span>
+            {status === "Expired" && !isExpiredProcessed && (
+              <button
+                type="button"
+                onClick={handleMarkExpiredProcessed}
+                className="px-3 py-1.5 text-xs bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-60"
+                disabled={isMarkingProcessed || isEditing || isSaving}
+              >
+                {isMarkingProcessed ? "Processing..." : "Mark as Processed"}
+              </button>
+            )}
+            {status === "Expired" && isExpiredProcessed && (
+              <span className="inline-flex items-center justify-center px-3 py-1.5 rounded text-xs bg-emerald-100 text-emerald-700">
+                Expired stock already processed
+              </span>
+            )}
           </div>
         </div>
       </div>
@@ -493,7 +614,13 @@ function ItemDetailsPage() {
         {isEditing ? (
           <>
             <button
-              onClick={() => setIsEditing(false)}
+              onClick={() => {
+                if (item) {
+                  setForm(mapItemToForm(item));
+                }
+                setIsEditing(false);
+                setErrorMessage("");
+              }}
               className="px-4 py-2 text-xs bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
               disabled={isSaving}
             >

@@ -227,37 +227,77 @@ using (var scope = app.Services.CreateScope())
         db.SaveChanges();
     }
 
-    if (!db.Medications.Any())
+    var medicationSeeds = new[]
     {
-        var medicationSeeds = new[]
-        {
-            ("Amoxicillin 100mg", "AMX2024001", "tablets", "5000 tablets", "2026-06-15", "PharmaCorp Ltd"),
-            ("Insulin Glargine 100IU/ml", "INS2024045", "vials", "45 vials", "2025-12-25", "MediSupply Inc"),
-            ("Paracetamol 500mg", "PAR2024022", "tablets", "28000 tablets", "2026-09-20", "MediSupply Inc"),
-            ("Morphine Sulfate 10mg/ml", "MOR2024008", "ampoules", "35 ampoules", "2026-01-15", "HealthPro Distributors"),
-            ("Azithromycin 250mg", "AZI2023166", "tablets", "0 tablets", "2024-11-15", "GlobalMed Supply"),
-            ("Metformin 850mg", "MET2024098", "tablets", "3500 tablets", "2026-02-28", "PharmaCorp Ltd"),
-            ("Lisinopril 10mg", "LIS2024112", "tablets", "2800 tablets", "2026-05-15", "GlobalMed Supply"),
-            ("Omeprazole 20mg", "OME2024089", "capsules", "4200 capsules", "2025-11-20", "MediSupply Inc"),
-            ("Atorvastatin 40mg", "ATO2024134", "tablets", "1800 tablets", "2026-01-10", "HealthPro Distributors"),
-            ("Amlodipine 5mg", "AML2024067", "tablets", "3100 tablets", "2026-08-05", "GlobalMed Supply")
-        };
+        ("Amoxicillin 100mg", "Amoxicillin", "AMX2024001", "tablets", "5000 tablets", "2026-06-15", "PharmaCorp Ltd", "Ambient", "A-1-001"),
+        ("Insulin Glargine 100IU/ml", "Insulin Glargine", "INS2024045", "vials", "45 vials", "2025-12-25", "MediSupply Inc", "Cold Storage", "B-2-015"),
+        ("Paracetamol 500mg", "Acetaminophen", "PAR2024022", "tablets", "28000 tablets", "2026-09-20", "MediSupply Inc", "Ambient", "A-3-045"),
+        ("Morphine Sulfate 10mg/ml", "Morphine Sulfate", "MOR2024008", "ampoules", "35 ampoules", "2026-01-15", "HealthPro Distributors", "Controlled", "C-1-003"),
+        ("Azithromycin 250mg", "Azithromycin", "AZI2023166", "tablets", "0 tablets", "2024-11-15", "GlobalMed Supply", "Ambient", "A-2-012"),
+        ("Metformin 850mg", "Metformin HCL", "MET2024098", "tablets", "3500 tablets", "2026-02-28", "PharmaCorp Ltd", "Ambient", "A-1-025"),
+        ("Lisinopril 10mg", "Lisinopril", "LIS2024112", "tablets", "2800 tablets", "2026-05-15", "GlobalMed Supply", "Ambient", "A-2-033"),
+        ("Omeprazole 20mg", "Omeprazole", "OME2024089", "capsules", "4200 capsules", "2025-11-20", "MediSupply Inc", "Ambient", "A-3-018"),
+        ("Atorvastatin 40mg", "Atorvastatin Calcium", "ATO2024134", "tablets", "1800 tablets", "2026-01-10", "HealthPro Distributors", "Ambient", "A-1-042"),
+        ("Amlodipine 5mg", "Amlodipine Besylate", "AML2024067", "tablets", "3100 tablets", "2026-08-05", "GlobalMed Supply", "Ambient", "A-2-028"),
+        ("Levothyroxine 100mcg", "Levothyroxine Sodium", "LEV2024091", "tablets", "2200 tablets", "2025-12-20", "PharmaCorp Ltd", "Cold Storage", "B-2-008"),
+        ("Gabapentin 300mg", "Gabapentin", "GAB2024078", "capsules", "1500 capsules", "2025-10-15", "MediSupply Inc", "Ambient", "A-1-037"),
+        ("Fentanyl 100mcg", "Fentanyl Citrate", "FEN2024033", "ampoules", "45 ampoules", "2026-02-15", "HealthPro Distributors", "Controlled", "C-1-007"),
+        ("Vaccine COVID-19 mRNA", "COVID-19 Vaccine", "VAC2025012", "vials", "350 vials", "2026-04-30", "GlobalMed Supply", "Frozen", "F-1-002"),
+        ("Epinephrine 1mg/ml", "Epinephrine", "EPI2025008", "ampoules", "180 ampoules", "2026-07-20", "MediSupply Inc", "Cold Storage", "B-1-012"),
+        ("Propofol 1% 50ml", "Propofol", "PRO2024089", "vials", "65 vials", "2025-12-10", "HealthPro Distributors", "Controlled", "C-2-004"),
+        ("Norepinephrine 4mg/4ml", "Norepinephrine", "NOR2024156", "ampoules", "220 ampoules", "2026-10-15", "MediSupply Inc", "Cold Storage", "B-2-019"),
+        ("Influenza Vaccine Quadrivalent", "Influenza Vaccine", "FLU2024201", "vials", "0 vials", "2024-10-30", "GlobalMed Supply", "Frozen", "F-1-005"),
+    };
 
-        db.Medications.AddRange(
-            medicationSeeds.Select(m => new Medication
-            {
-                Name = m.Item1,
-                BatchNumber = m.Item2,
-                Unit = m.Item3,
-                StockQuantity = ParseLeadingInt(m.Item4),
-                ReorderLevel = 100,
-                ExpiryDate = m.Item5 == null ? null : ParseUtc(m.Item5, DateTime.UtcNow.AddYears(1)),
-                Supplier = m.Item6,
-                CreatedAt = DateTime.UtcNow
-            })
+    var existingMedications = db.Medications
+        .AsEnumerable()
+        .Where(m => !string.IsNullOrWhiteSpace(m.BatchNumber))
+        .GroupBy(m => m.BatchNumber.Trim(), StringComparer.OrdinalIgnoreCase)
+        .ToDictionary(
+            g => g.Key,
+            g => g.OrderByDescending(m => m.Id).First(),
+            StringComparer.OrdinalIgnoreCase
         );
-        db.SaveChanges();
+
+    foreach (var seed in medicationSeeds)
+    {
+        var stockQuantity = ParseLeadingInt(seed.Item5);
+        var expiryDate = seed.Item6 == null
+            ? (DateTime?)null
+            : ParseUtc(seed.Item6, DateTime.UtcNow.AddYears(1));
+
+        if (existingMedications.TryGetValue(seed.Item3, out var existingMedication))
+        {
+            existingMedication.Name = seed.Item1;
+            existingMedication.GenericName = seed.Item2;
+            existingMedication.Unit = seed.Item4;
+            existingMedication.StockQuantity = stockQuantity;
+            existingMedication.ReorderLevel = 100;
+            existingMedication.ExpiryDate = expiryDate;
+            existingMedication.Supplier = seed.Item7;
+            existingMedication.Storage = seed.Item8;
+            existingMedication.Location = seed.Item9;
+        }
+        else
+        {
+            db.Medications.Add(new Medication
+            {
+                Name = seed.Item1,
+                GenericName = seed.Item2,
+                BatchNumber = seed.Item3,
+                Unit = seed.Item4,
+                StockQuantity = stockQuantity,
+                ReorderLevel = 100,
+                ExpiryDate = expiryDate,
+                Supplier = seed.Item7,
+                Storage = seed.Item8,
+                Location = seed.Item9,
+                CreatedAt = DateTime.UtcNow
+            });
+        }
     }
+
+    db.SaveChanges();
 
     if (!db.Departments.Any())
     {
