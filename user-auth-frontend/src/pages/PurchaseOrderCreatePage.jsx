@@ -211,7 +211,9 @@ function PurchaseOrderCreatePage() {
   };
 
   const handleAddItem = (item) => {
-    const existing = purchaseList.find((purchaseItem) => purchaseItem.id === item.id);
+    const existing = purchaseList.find(
+      (purchaseItem) => purchaseItem.id === item.id,
+    );
     if (existing) return;
     setPurchaseList((prev) => [...prev, { ...item, quantity: 1 }]);
     setMessage("");
@@ -348,7 +350,9 @@ function PurchaseOrderCreatePage() {
                   <method.icon size={16} />
                   <span className="text-xs">{method.label}</span>
                 </div>
-                <div className="text-xs text-gray-500 ml-7">{method.description}</div>
+                <div className="text-xs text-gray-500 ml-7">
+                  {method.description}
+                </div>
               </button>
             ))}
           </div>
@@ -356,7 +360,9 @@ function PurchaseOrderCreatePage() {
 
         <div className="flex-1">
           <h2 className="text-sm text-gray-900 mb-3">
-            {selectedMethod === "manualEntry" ? "Manual Entry" : "Recommended Items"}
+            {selectedMethod === "manualEntry"
+              ? "Manual Entry"
+              : "Recommended Items"}
           </h2>
 
           {selectedMethod === "manualEntry" && (
@@ -404,9 +410,15 @@ function PurchaseOrderCreatePage() {
                 className="p-4 flex items-center justify-between hover:bg-gray-50"
               >
                 <div>
-                  <div className="text-xs text-gray-900 mb-0.5">{item.name}</div>
-                  <div className="text-xs text-gray-600 mb-1">{item.specification}</div>
-                  <div className="text-xs text-gray-500">{item.currentStock}</div>
+                  <div className="text-xs text-gray-900 mb-0.5">
+                    {item.name}
+                  </div>
+                  <div className="text-xs text-gray-600 mb-1">
+                    {item.specification}
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    {item.currentStock}
+                  </div>
                 </div>
                 <button
                   type="button"
@@ -425,12 +437,16 @@ function PurchaseOrderCreatePage() {
           <h2 className="text-sm text-gray-900 mb-3">Purchase List</h2>
           <div className="bg-white border border-gray-200 rounded-lg p-4 sticky top-8">
             <div className="mb-4">
-              <div className="text-xs text-gray-500">{purchaseList.length} Items</div>
+              <div className="text-xs text-gray-500">
+                {purchaseList.length} Items
+              </div>
             </div>
 
             {purchaseList.length === 0 ? (
               <div className="py-12 text-center">
-                <div className="text-xs text-gray-400 mb-1">No items added yet</div>
+                <div className="text-xs text-gray-400 mb-1">
+                  No items added yet
+                </div>
                 <div className="text-xs text-gray-400">
                   Add items from the recommended list
                 </div>
@@ -443,7 +459,9 @@ function PurchaseOrderCreatePage() {
                       <div className="flex-1">
                         <div className="text-xs text-gray-900">{item.name}</div>
                         {!!item.specification && (
-                          <div className="text-xs text-gray-500">{item.specification}</div>
+                          <div className="text-xs text-gray-500">
+                            {item.specification}
+                          </div>
                         )}
                       </div>
                       <button
