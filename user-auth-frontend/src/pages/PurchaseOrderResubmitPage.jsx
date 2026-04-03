@@ -175,7 +175,21 @@ function PurchaseOrderResubmitPage() {
             const parsed = JSON.parse(draftRaw);
             if (Array.isArray(parsed?.items)) {
               setSelectedMethod(parsed.selectedMethod || "lowStock");
-              setPurchaseList(parsed.items);
+              setPurchaseList(
+                parsed.items
+                  .map((item, index) => ({
+                    id: item.id ?? `draft-${index}`,
+                    name: item.name || item.description || "",
+                    specification:
+                      item.specification || item.unit || item.spec || "",
+                    quantity: Math.max(
+                      1,
+                      Number(item.quantity ?? item.quantityOrdered) || 1,
+                    ),
+                    supplier: item.supplier || loadedOrder?.supplierName || "",
+                  }))
+                  .filter((item) => item.name),
+              );
               setNotes(parsed.notes || "");
               setIsLoading(false);
               return;
@@ -188,7 +202,7 @@ function PurchaseOrderResubmitPage() {
         const mappedItems = (loadedOrder?.items || []).map((item, index) => ({
           id: item.id ?? `item-${index}`,
           name: item.description || "",
-          specification: item.unit || "",
+          specification: item.unit || item.specification || "",
           quantity: Math.max(1, Number(item.quantityOrdered) || 1),
           supplier: loadedOrder?.supplierName || "",
         }));
@@ -256,7 +270,8 @@ function PurchaseOrderResubmitPage() {
   };
 
   const handleAddRecommended = (item) => {
-    if (purchaseList.find((purchaseItem) => purchaseItem.id === item.id)) return;
+    if (purchaseList.find((purchaseItem) => purchaseItem.id === item.id))
+      return;
     setPurchaseList((prev) => [
       ...prev,
       {
@@ -300,12 +315,21 @@ function PurchaseOrderResubmitPage() {
   };
 
   const handleSubmit = async () => {
-    if (!orderId || !canEditRejectedOrder) return;
+      if (!orderId) {
+        setError("Order ID is missing.");
+        return;
+      }
+    
+      if (!canEditRejectedOrder) {
+        setError("You do not have permission to edit this order.");
+        return;
+      }
 
     const normalizedItems = purchaseList
       .map((item) => ({
         medicationId: item.medicationId ?? null,
-        description: `${item.name}${item.specification ? ` ${item.specification}` : ""}`.trim(),
+        description:
+          `${item.name}${item.specification ? ` ${item.specification}` : ""}`.trim(),
         quantityOrdered: Math.max(1, Number(item.quantity) || 1),
       }))
       .filter((item) => item.description);
@@ -319,7 +343,8 @@ function PurchaseOrderResubmitPage() {
     try {
       setIsSubmitting(true);
       await purchaseOrderApi.resubmit(orderId, {
-        notes: `${notes.trim()}${notes.trim() ? "\n" : ""}Order method: ${getOrderMethodLabel(selectedMethod)}`.trim(),
+        notes:
+          `${notes.trim()}${notes.trim() ? "\n" : ""}Order method: ${getOrderMethodLabel(selectedMethod)}`.trim(),
         items: normalizedItems,
       });
 
@@ -390,7 +415,9 @@ function PurchaseOrderResubmitPage() {
                       <method.icon size={16} />
                       <span className="text-xs">{method.label}</span>
                     </div>
-                    <div className="text-xs text-gray-500 ml-7">{method.description}</div>
+                    <div className="text-xs text-gray-500 ml-7">
+                      {method.description}
+                    </div>
                   </button>
                 ))}
               </div>
@@ -398,7 +425,9 @@ function PurchaseOrderResubmitPage() {
 
             <div className="flex-1">
               <h2 className="text-sm text-gray-900 mb-3">
-                {selectedMethod === "manualEntry" ? "Manual Entry" : "Recommended Items"}
+                {selectedMethod === "manualEntry"
+                  ? "Manual Entry"
+                  : "Recommended Items"}
               </h2>
 
               {selectedMethod === "manualEntry" && (
@@ -413,7 +442,9 @@ function PurchaseOrderResubmitPage() {
                         type="text"
                         placeholder="Search or Enter Item Name"
                         value={manualItemName}
-                        onChange={(event) => setManualItemName(event.target.value)}
+                        onChange={(event) =>
+                          setManualItemName(event.target.value)
+                        }
                         className="w-full pl-9 pr-3 py-1.5 border border-gray-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
                     </div>
@@ -423,7 +454,9 @@ function PurchaseOrderResubmitPage() {
                         min="1"
                         placeholder="Quantity"
                         value={manualQuantity}
-                        onChange={(event) => setManualQuantity(event.target.value)}
+                        onChange={(event) =>
+                          setManualQuantity(event.target.value)
+                        }
                         className="flex-1 px-3 py-1.5 border border-gray-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
                       <button
@@ -446,9 +479,15 @@ function PurchaseOrderResubmitPage() {
                     className="p-4 flex items-center justify-between hover:bg-gray-50"
                   >
                     <div>
-                      <div className="text-xs text-gray-900 mb-0.5">{item.name}</div>
-                      <div className="text-xs text-gray-600 mb-1">{item.specification}</div>
-                      <div className="text-xs text-gray-500">{item.currentStock}</div>
+                      <div className="text-xs text-gray-900 mb-0.5">
+                        {item.name}
+                      </div>
+                      <div className="text-xs text-gray-600 mb-1">
+                        {item.specification}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        {item.currentStock}
+                      </div>
                     </div>
                     <button
                       type="button"
@@ -467,13 +506,19 @@ function PurchaseOrderResubmitPage() {
               <h2 className="text-sm text-gray-900 mb-3">Purchase List</h2>
               <div className="bg-white border border-gray-200 rounded-lg p-4 sticky top-8">
                 <div className="mb-4">
-                  <div className="text-xs text-gray-500">{purchaseList.length} Items</div>
+                  <div className="text-xs text-gray-500">
+                    {purchaseList.length} Items
+                  </div>
                 </div>
 
                 {purchaseList.length === 0 ? (
                   <div className="py-12 text-center">
-                    <div className="text-xs text-gray-400 mb-1">No items added yet</div>
-                    <div className="text-xs text-gray-400">Add items from the recommended list</div>
+                    <div className="text-xs text-gray-400 mb-1">
+                      No items added yet
+                    </div>
+                    <div className="text-xs text-gray-400">
+                      Add items from the recommended list
+                    </div>
                   </div>
                 ) : (
                   <div className="space-y-2 mb-6 max-h-[400px] overflow-y-auto">
@@ -481,9 +526,13 @@ function PurchaseOrderResubmitPage() {
                       <div key={item.id} className="p-3 bg-gray-50 rounded-lg">
                         <div className="flex items-start justify-between mb-2">
                           <div className="flex-1">
-                            <div className="text-xs text-gray-900">{item.name}</div>
+                            <div className="text-xs text-gray-900">
+                              {item.name}
+                            </div>
                             {item.specification && (
-                              <div className="text-xs text-gray-500">{item.specification}</div>
+                              <div className="text-xs text-gray-500">
+                                {item.specification}
+                              </div>
                             )}
                           </div>
                           <button
@@ -500,7 +549,11 @@ function PurchaseOrderResubmitPage() {
                             type="number"
                             value={item.quantity}
                             onChange={(event) =>
-                              handlePurchaseItemChange(item.id, "quantity", event.target.value)
+                              handlePurchaseItemChange(
+                                item.id,
+                                "quantity",
+                                event.target.value,
+                              )
                             }
                             className="w-20 px-2 py-1 border border-gray-300 rounded text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
                             min="1"
@@ -513,7 +566,9 @@ function PurchaseOrderResubmitPage() {
 
                 <div className="space-y-3">
                   <div>
-                    <label className="block text-xs text-gray-700 mb-2">Resubmit Notes</label>
+                    <label className="block text-xs text-gray-700 mb-2">
+                      Resubmit Notes
+                    </label>
                     <textarea
                       rows={3}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"

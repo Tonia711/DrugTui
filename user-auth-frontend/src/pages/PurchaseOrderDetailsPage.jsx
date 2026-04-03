@@ -758,9 +758,12 @@ function PurchaseOrderDetailsPage() {
 
           {canResubmitRejected && (
             <div className="bg-white rounded-lg border border-gray-200 p-6">
-              <h3 className="text-sm text-gray-900 mb-2">Rejected Order Actions</h3>
+              <h3 className="text-sm text-gray-900 mb-2">
+                Rejected Order Actions
+              </h3>
               <p className="text-xs text-gray-500 mb-4">
-                You can modify this rejected order on a dedicated page and resubmit it, or delete it.
+                You can modify this rejected order on a dedicated page and
+                resubmit it, or delete it.
               </p>
               <div className="mt-4 flex gap-3">
                 <button
@@ -782,7 +785,9 @@ function PurchaseOrderDetailsPage() {
                   className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-xs disabled:bg-gray-300 disabled:cursor-not-allowed"
                 >
                   <Trash2 size={18} />
-                  <span>{isUpdatingStatus ? "Processing..." : "Delete Order"}</span>
+                  <span>
+                    {isUpdatingStatus ? "Processing..." : "Delete Order"}
+                  </span>
                 </button>
               </div>
             </div>
