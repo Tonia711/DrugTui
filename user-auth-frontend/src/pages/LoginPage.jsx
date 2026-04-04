@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Lock, X, Phone, Mail, MessageCircle } from "lucide-react";
 import useAxios from "../hooks/useAxios";
+import api from "../util/api";
 import logoImage from "../assets/159be5b2673509fff982b6d650d9a19a8a77d2d1.png";
 
 function LoginPage() {
@@ -26,7 +27,15 @@ function LoginPage() {
       const res = await sendRequest({ email, password });
       const token = res.data.token;
       localStorage.setItem("token", token);
-      navigate("/dashboard");
+
+      try {
+        const meRes = await api.get("/Users/me");
+        const role = meRes.data?.role;
+        const normalizedRole = role === "User" ? "DepartmentMember" : role;
+        navigate(normalizedRole === "DepartmentMember" ? "/inventory" : "/dashboard");
+      } catch {
+        navigate("/dashboard");
+      }
     } catch {
       setError("Login failed. Please check your email and password.");
     }

@@ -19,6 +19,10 @@ import logoImage from "../assets/159be5b2673509fff982b6d650d9a19a8a77d2d1.png";
 function Layout() {
   const navigate = useNavigate();
   const { data: user } = useAxios({ method: "get", url: "/Users/me" });
+  const normalizedRole =
+    user?.role === "User" ? "DepartmentMember" : user?.role;
+  const isWarehouseUser =
+    normalizedRole === "Admin" || normalizedRole === "WarehouseStaff";
 
   const handleLogout = () => {
     localStorage.removeItem("token");
@@ -56,54 +60,73 @@ function Layout() {
         <div className="mb-8">
           <div className="text-xs text-gray-500 mb-3 px-3">Main</div>
           <nav className="space-y-1">
-            <NavLink to="/dashboard" className={navClass}>
-              <LayoutDashboard size={16} />
-              <span className="text-xs">Dashboard</span>
-            </NavLink>
+            {isWarehouseUser && (
+              <NavLink to="/dashboard" className={navClass}>
+                <LayoutDashboard size={16} />
+                <span className="text-xs">Dashboard</span>
+              </NavLink>
+            )}
             <NavLink to="/inventory" className={navClass}>
               <Package size={16} />
               <span className="text-xs">Inventory</span>
             </NavLink>
-
-            <div className="space-y-1">
-              <div className="w-full flex items-center justify-between gap-3 px-3 py-1.5 rounded-lg text-left text-gray-600">
-                <div className="flex items-center gap-3">
-                  <PackageCheck size={16} />
-                  <span className="text-xs">Procurement</span>
+            {isWarehouseUser ? (
+              <>
+                <div className="space-y-1">
+                  <div className="w-full flex items-center justify-between gap-3 px-3 py-1.5 rounded-lg text-left text-gray-600">
+                    <div className="flex items-center gap-3">
+                      <PackageCheck size={16} />
+                      <span className="text-xs">Procurement</span>
+                    </div>
+                    <ChevronDown size={14} />
+                  </div>
+                  <NavLink
+                    to="/procurement/purchase-order"
+                    className={subNavClass}
+                  >
+                    Purchase Order
+                  </NavLink>
+                  <NavLink to="/procurement/invoice" className={subNavClass}>
+                    Invoice
+                  </NavLink>
                 </div>
-                <ChevronDown size={14} />
-              </div>
-              <NavLink to="/procurement/purchase-order" className={subNavClass}>
-                Purchase Order
-              </NavLink>
-              <NavLink to="/procurement/invoice" className={subNavClass}>
-                Invoice
-              </NavLink>
-            </div>
 
-            <NavLink to="/department-request" className={navClass}>
-              <Boxes size={16} />
-              <span className="text-xs">Department Request</span>
-            </NavLink>
+                <NavLink to="/department-request" className={navClass}>
+                  <Boxes size={16} />
+                  <span className="text-xs">Department Request</span>
+                </NavLink>
+              </>
+            ) : (
+              <>
+                <NavLink to="/department-request/mine" className={navClass}>
+                  <Boxes size={16} />
+                  <span className="text-xs">My Requests</span>
+                </NavLink>
+              </>
+            )}
           </nav>
         </div>
 
         <div className="flex-1">
-          <div className="text-xs text-gray-500 mb-3 px-3">Management</div>
-          <nav className="space-y-1">
-            <NavLink to="/storage-zone" className={navClass}>
-              <NotebookPen size={16} />
-              <span className="text-xs">Storage Zone</span>
-            </NavLink>
-            <NavLink to="/reports" className={navClass}>
-              <FileText size={16} />
-              <span className="text-xs">Reports</span>
-            </NavLink>
-            <NavLink to="/settings" className={navClass}>
-              <Settings size={16} />
-              <span className="text-xs">Settings</span>
-            </NavLink>
-          </nav>
+          {isWarehouseUser && (
+            <>
+              <div className="text-xs text-gray-500 mb-3 px-3">Management</div>
+              <nav className="space-y-1">
+                <NavLink to="/storage-zone" className={navClass}>
+                  <NotebookPen size={16} />
+                  <span className="text-xs">Storage Zone</span>
+                </NavLink>
+                <NavLink to="/reports" className={navClass}>
+                  <FileText size={16} />
+                  <span className="text-xs">Reports</span>
+                </NavLink>
+                <NavLink to="/settings" className={navClass}>
+                  <Settings size={16} />
+                  <span className="text-xs">Settings</span>
+                </NavLink>
+              </nav>
+            </>
+          )}
         </div>
 
         <div className="mt-auto pt-6 border-t border-gray-200">

@@ -96,7 +96,10 @@ function PurchaseOrderDetailsPage() {
     load();
   }, [location.state, orderId]);
 
-  const isManager = currentUser?.role === "Admin";
+  const normalizedRole =
+    currentUser?.role === "User" ? "DepartmentMember" : currentUser?.role;
+  const isManager =
+    normalizedRole === "Admin" || normalizedRole === "WarehouseStaff";
   const isOwner =
     !!currentUser?.id &&
     !!order?.createdByUserId &&

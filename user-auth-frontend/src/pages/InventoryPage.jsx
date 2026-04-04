@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { inventoryApi } from "../util/api";
 import StatusBadge from "../components/StatusBadge";
+import useAxios from "../hooks/useAxios";
 
 const initialCreateForm = {
   name: "",
@@ -27,6 +28,11 @@ const initialCreateForm = {
 
 function InventoryPage() {
   const navigate = useNavigate();
+  const { data: currentUser } = useAxios({ method: "get", url: "/Users/me" });
+  const normalizedRole =
+    currentUser?.role === "User" ? "DepartmentMember" : currentUser?.role;
+  const canCreateItem =
+    normalizedRole === "Admin" || normalizedRole === "WarehouseStaff";
   const [keyword, setKeyword] = useState("");
   const [selectedStatus, setSelectedStatus] = useState(null);
   const [showStatusDropdown, setShowStatusDropdown] = useState(false);
@@ -161,7 +167,9 @@ function InventoryPage() {
     }
   };
 
-  const inventoryData = medicines;
+  const inventoryData = medicines.filter(
+    (item) => !(item.status === "Expired" && item.isExpiredProcessed),
+  );
 
   const filteredData = inventoryData.filter((item) => {
     const hitKeyword =
@@ -258,17 +266,19 @@ function InventoryPage() {
             <span>Inventory Management</span>
           </div>
         </div>
-        <button
-          type="button"
-          onClick={() => setShowCreateForm((prev) => !prev)}
-          className="flex items-center gap-2 bg-gray-900 text-white px-3 py-1.5 rounded-lg hover:bg-gray-800 transition-colors"
-        >
-          <Plus size={14} />
-          <span className="text-xs">Add New Item</span>
-        </button>
+        {canCreateItem && (
+          <button
+            type="button"
+            onClick={() => setShowCreateForm((prev) => !prev)}
+            className="flex items-center gap-2 bg-gray-900 text-white px-3 py-1.5 rounded-lg hover:bg-gray-800 transition-colors"
+          >
+            <Plus size={14} />
+            <span className="text-xs">Add New Item</span>
+          </button>
+        )}
       </div>
 
-      {showCreateForm && (
+      {showCreateForm && canCreateItem && (
         <form
           className="bg-white border border-gray-200 rounded-lg p-5 grid grid-cols-1 md:grid-cols-2 gap-4"
           onSubmit={handleCreate}

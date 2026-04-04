@@ -89,6 +89,17 @@ export const invoiceApi = {
 export const departmentRequestApi = {
   getAll: (keyword) =>
     api.get("/DepartmentRequests", { params: keyword ? { keyword } : {} }),
+  getMine: (keyword) =>
+    api.get("/DepartmentRequests/mine", { params: keyword ? { keyword } : {} }),
+  getByRequestNumber: (requestNumber) =>
+    api.get(`/DepartmentRequests/${encodeURIComponent(requestNumber)}`),
+  updateStatus: (requestNumber, payload) =>
+    api.put(
+      `/DepartmentRequests/${encodeURIComponent(requestNumber)}/status`,
+      payload,
+    ),
+  delete: (requestNumber) =>
+    api.delete(`/DepartmentRequests/${encodeURIComponent(requestNumber)}`),
   create: (payload) => api.post("/DepartmentRequests", payload),
 };
 

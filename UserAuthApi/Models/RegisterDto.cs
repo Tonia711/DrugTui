@@ -16,7 +16,9 @@ namespace UserAuthApi.Models
         public string Password { get; set; } = string.Empty;
 
         [Required]
-        public string RoleDescription { get; set; } = string.Empty;
+        public string Role { get; set; } = "DepartmentMember";
+
+        public int? DepartmentId { get; set; }
 
         public string? Bio { get; set; }
     }

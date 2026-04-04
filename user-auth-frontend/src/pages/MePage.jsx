@@ -3,6 +3,23 @@ import { useNavigate } from "react-router-dom";
 import useAxios from "../hooks/useAxios";
 import api from "../util/api";
 
+const USER_ROLE_OPTIONS = [
+  { value: "WarehouseStaff", label: "Warehouse Staff" },
+  { value: "DepartmentMember", label: "Department Member" },
+];
+
+const normalizeRole = (role) => (role === "User" ? "DepartmentMember" : role);
+
+const isDepartmentRole = (role) => normalizeRole(role) === "DepartmentMember";
+
+const formatRoleLabel = (role) => {
+  const normalizedRole = normalizeRole(role);
+  if (normalizedRole === "Admin") return "Admin";
+  if (normalizedRole === "WarehouseStaff") return "Warehouse Staff";
+  if (normalizedRole === "DepartmentMember") return "Department Member";
+  return normalizedRole || "-";
+};
+
 function MePage() {
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [currentPassword, setCurrentPassword] = useState("");
@@ -12,7 +29,8 @@ function MePage() {
     username: "",
     email: "",
     password: "",
-    roleDescription: "",
+    role: "DepartmentMember",
+    departmentId: "",
   });
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
@@ -24,7 +42,9 @@ function MePage() {
   const [deletingUserByAdmin, setDeletingUserByAdmin] = useState(false);
   const [resettingUserId, setResettingUserId] = useState(null);
   const [savingRoleUserId, setSavingRoleUserId] = useState(null);
-  const [roleByUserId, setRoleByUserId] = useState({});
+  const [roleFormByUserId, setRoleFormByUserId] = useState({});
+  const [editingRoleByUserId, setEditingRoleByUserId] = useState({});
+  const [departments, setDepartments] = useState([]);
   const [loadedAdminUsers, setLoadedAdminUsers] = useState(false);
   const navigate = useNavigate();
 
@@ -42,11 +62,13 @@ function MePage() {
     runOnMount: false,
   });
 
-  const { sendRequest: changePassword, isLoading: changingPassword } = useAxios({
-    method: "put",
-    url: "/Users/me/password",
-    runOnMount: false,
-  });
+  const { sendRequest: changePassword, isLoading: changingPassword } = useAxios(
+    {
+      method: "put",
+      url: "/Users/me/password",
+      runOnMount: false,
+    },
+  );
 
   const {
     data: users,
@@ -64,7 +86,7 @@ function MePage() {
     runOnMount: false,
   });
 
-  const isAdmin = user?.role === "Admin";
+  const isAdmin = normalizeRole(user?.role) === "Admin";
 
   useEffect(() => {
     if (isAdmin && !loadedAdminUsers) {
@@ -74,13 +96,36 @@ function MePage() {
   }, [isAdmin, loadedAdminUsers]);
 
   useEffect(() => {
+    const loadDepartments = async () => {
+      if (!isAdmin) return;
+      try {
+        const res = await api.get("/Departments");
+        const data = Array.isArray(res.data) ? res.data : [];
+        setDepartments(data);
+        setAdminForm((prev) => ({
+          ...prev,
+          departmentId:
+            prev.departmentId || (data[0] ? String(data[0].id) : ""),
+        }));
+      } catch {
+        setDepartments([]);
+      }
+    };
+
+    loadDepartments();
+  }, [isAdmin]);
+
+  useEffect(() => {
     if (!users?.length) return;
 
-    const nextRoles = {};
+    const nextRoleForms = {};
     users.forEach((account) => {
-      nextRoles[account.id] = account.roleDescription || "";
+      nextRoleForms[account.id] = {
+        role: normalizeRole(account.role) || "DepartmentMember",
+        departmentId: account.departmentId ? String(account.departmentId) : "",
+      };
     });
-    setRoleByUserId(nextRoles);
+    setRoleFormByUserId(nextRoleForms);
   }, [users]);
 
   const handleChangePassword = async () => {
@@ -111,7 +156,13 @@ function MePage() {
 
     try {
       await createUser(adminForm);
-      setAdminForm({ username: "", email: "", password: "", roleDescription: "" });
+      setAdminForm((prev) => ({
+        username: "",
+        email: "",
+        password: "",
+        role: "DepartmentMember",
+        departmentId: prev.departmentId,
+      }));
       setAdminMessage("User created successfully.");
       refreshUsers();
     } catch (err) {
@@ -157,17 +208,30 @@ function MePage() {
   };
 
   const handleUpdateRoleByAdmin = async (account) => {
-    const roleText = (roleByUserId[account.id] || "").trim();
-    if (!roleText) {
-      setAdminError("Role cannot be empty.");
+    const form = roleFormByUserId[account.id];
+    if (!form?.role) {
+      setAdminError("Please select a role.");
+      return;
+    }
+
+    if (
+      form.role === "DepartmentMember" &&
+      (!form.departmentId || Number(form.departmentId) <= 0)
+    ) {
+      setAdminError("Department member must be assigned to a department.");
       return;
     }
 
     try {
       setSavingRoleUserId(account.id);
       setAdminError("");
-      await api.put(`/Users/${account.id}/role`, { roleDescription: roleText });
+      await api.put(`/Users/${account.id}/role`, {
+        role: form.role,
+        departmentId:
+          form.role === "DepartmentMember" ? Number(form.departmentId) : null,
+      });
       setAdminMessage("Role updated successfully.");
+      setEditingRoleByUserId((prev) => ({ ...prev, [account.id]: false }));
       refreshUsers();
     } catch (err) {
       setAdminError(err.response?.data || "Failed to update role.");
@@ -200,18 +264,29 @@ function MePage() {
                 <p className="text-xs text-gray-500">{user.email}</p>
               </div>
               <span className="inline-flex items-center rounded-full bg-gray-100 px-3 py-1 text-xs text-gray-700">
-                {user.role}
+                {formatRoleLabel(user.role)}
               </span>
             </div>
-            {message && <p className="text-sm text-green-700 mt-3">{message}</p>}
+            {message && (
+              <p className="text-sm text-green-700 mt-3">{message}</p>
+            )}
             {error && <p className="text-sm text-red-600 mt-3">{error}</p>}
           </div>
 
           <div className="bg-white border border-gray-200 rounded-lg p-5">
             <h2 className="text-sm text-gray-900 mb-3">Role</h2>
-            <p className="text-sm text-gray-700">
-              {user.role === "Admin" ? "Manager" : user.roleDescription || "No role yet."}
-            </p>
+            <div className="space-y-2 text-sm text-gray-700">
+              <p>
+                <span className="text-gray-500">Role Type: </span>
+                {formatRoleLabel(user.role)}
+              </p>
+              <p>
+                <span className="text-gray-500">Department: </span>
+                {isDepartmentRole(user.role)
+                  ? user.departmentName || "Not assigned"
+                  : "N/A"}
+              </p>
+            </div>
           </div>
 
           <div className="bg-white border border-gray-200 rounded-lg p-5">
@@ -219,7 +294,9 @@ function MePage() {
             {isChangingPassword ? (
               <div className="space-y-3">
                 <div>
-                  <label className="block text-xs text-gray-600 mb-1">Current Password</label>
+                  <label className="block text-xs text-gray-600 mb-1">
+                    Current Password
+                  </label>
                   <input
                     type="password"
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-gray-200"
@@ -229,7 +306,9 @@ function MePage() {
                 </div>
 
                 <div>
-                  <label className="block text-xs text-gray-600 mb-1">New Password</label>
+                  <label className="block text-xs text-gray-600 mb-1">
+                    New Password
+                  </label>
                   <input
                     type="password"
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-gray-200"
@@ -239,7 +318,9 @@ function MePage() {
                 </div>
 
                 <div>
-                  <label className="block text-xs text-gray-600 mb-1">Confirm New Password</label>
+                  <label className="block text-xs text-gray-600 mb-1">
+                    Confirm New Password
+                  </label>
                   <input
                     type="password"
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-gray-200"
@@ -276,123 +357,344 @@ function MePage() {
 
           {isAdmin && (
             <div className="bg-white border border-gray-200 rounded-lg p-5">
-              <h2 className="text-sm text-gray-900 mb-3">User Management (Admin)</h2>
+              <h2 className="text-sm text-gray-900 mb-3">
+                User Management (Admin)
+              </h2>
 
-              <form onSubmit={handleCreateUserByAdmin} className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <form
+                onSubmit={handleCreateUserByAdmin}
+                className="grid grid-cols-1 md:grid-cols-2 gap-3"
+              >
                 <div>
-                  <label className="block text-xs text-gray-600 mb-1">Username</label>
+                  <label className="block text-xs text-gray-600 mb-1">
+                    Username
+                  </label>
                   <input
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-gray-200"
                     value={adminForm.username}
                     onChange={(e) =>
-                      setAdminForm((prev) => ({ ...prev, username: e.target.value }))
+                      setAdminForm((prev) => ({
+                        ...prev,
+                        username: e.target.value,
+                      }))
                     }
                     required
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs text-gray-600 mb-1">Email</label>
+                  <label className="block text-xs text-gray-600 mb-1">
+                    Email
+                  </label>
                   <input
                     type="email"
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-gray-200"
                     value={adminForm.email}
                     onChange={(e) =>
-                      setAdminForm((prev) => ({ ...prev, email: e.target.value }))
+                      setAdminForm((prev) => ({
+                        ...prev,
+                        email: e.target.value,
+                      }))
                     }
                     required
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs text-gray-600 mb-1">Password</label>
+                  <label className="block text-xs text-gray-600 mb-1">
+                    Password
+                  </label>
                   <input
                     type="password"
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-gray-200"
                     value={adminForm.password}
                     onChange={(e) =>
-                      setAdminForm((prev) => ({ ...prev, password: e.target.value }))
+                      setAdminForm((prev) => ({
+                        ...prev,
+                        password: e.target.value,
+                      }))
                     }
                     required
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs text-gray-600 mb-1">Role</label>
-                  <input
+                  <label className="block text-xs text-gray-600 mb-1">
+                    Role Type
+                  </label>
+                  <select
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-gray-200"
-                    value={adminForm.roleDescription}
+                    value={adminForm.role}
                     onChange={(e) =>
-                      setAdminForm((prev) => ({ ...prev, roleDescription: e.target.value }))
+                      setAdminForm((prev) => ({
+                        ...prev,
+                        role: e.target.value,
+                      }))
                     }
                     required
-                  />
+                  >
+                    {USER_ROLE_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
+                {adminForm.role === "DepartmentMember" && (
+                  <div>
+                    <label className="block text-xs text-gray-600 mb-1">
+                      Department
+                    </label>
+                    <select
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-gray-200"
+                      value={adminForm.departmentId}
+                      onChange={(e) =>
+                        setAdminForm((prev) => ({
+                          ...prev,
+                          departmentId: e.target.value,
+                        }))
+                      }
+                      required
+                    >
+                      <option value="">Select Department</option>
+                      {departments.map((department) => (
+                        <option key={department.id} value={department.id}>
+                          {department.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
                 <div className="md:col-span-2">
-                  <button className="px-3 py-2 bg-blue-600 text-white rounded-lg text-xs hover:bg-blue-700" type="submit" disabled={creatingUser}>
+                  <button
+                    className="px-3 py-2 bg-blue-600 text-white rounded-lg text-xs hover:bg-blue-700"
+                    type="submit"
+                    disabled={creatingUser}
+                  >
                     {creatingUser ? "Creating..." : "Add New User"}
                   </button>
                 </div>
               </form>
 
-              {adminMessage && <p className="text-sm text-green-700 mt-3">{adminMessage}</p>}
-              {adminError && <p className="text-sm text-red-600 mt-3">{adminError}</p>}
+              {adminMessage && (
+                <p className="text-sm text-green-700 mt-3">{adminMessage}</p>
+              )}
+              {adminError && (
+                <p className="text-sm text-red-600 mt-3">{adminError}</p>
+              )}
 
               <div className="overflow-x-auto mt-4">
                 <table className="w-full border-collapse text-xs">
                   <thead className="bg-gray-50 border-y border-gray-200">
                     <tr>
                       <th className="text-left py-2 px-2 text-gray-600">ID</th>
-                      <th className="text-left py-2 px-2 text-gray-600">Username</th>
-                      <th className="text-left py-2 px-2 text-gray-600">Email</th>
-                      <th className="text-left py-2 px-2 text-gray-600">Role</th>
-                      <th className="text-left py-2 px-2 text-gray-600">Role</th>
-                      <th className="text-left py-2 px-2 text-gray-600">Reset Password</th>
-                      <th className="text-left py-2 px-2 text-gray-600">Delete</th>
+                      <th className="text-left py-2 px-2 text-gray-600">
+                        Username
+                      </th>
+                      <th className="text-left py-2 px-2 text-gray-600">
+                        Email
+                      </th>
+                      <th className="text-left py-2 px-2 text-gray-600">
+                        Role Type
+                      </th>
+                      <th className="text-left py-2 px-2 text-gray-600">
+                        Department
+                      </th>
+                      <th className="text-left py-2 px-2 text-gray-600">
+                        Reset Password
+                      </th>
+                      <th className="text-left py-2 px-2 text-gray-600">
+                        Delete
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
                     {usersLoading ? (
                       <tr>
-                        <td className="py-3 px-2" colSpan={7}>Loading users...</td>
+                        <td className="py-3 px-2" colSpan={7}>
+                          Loading users...
+                        </td>
                       </tr>
                     ) : !users?.length ? (
                       <tr>
-                        <td className="py-3 px-2" colSpan={7}>No users found.</td>
+                        <td className="py-3 px-2" colSpan={7}>
+                          No users found.
+                        </td>
                       </tr>
                     ) : (
                       users.map((account) => (
-                        <tr key={account.id} className="border-b border-gray-100">
+                        <tr
+                          key={account.id}
+                          className="border-b border-gray-100"
+                        >
                           <td className="py-2 px-2">{account.id}</td>
                           <td className="py-2 px-2">{account.username}</td>
                           <td className="py-2 px-2">{account.email}</td>
                           <td className="py-2 px-2">
                             {account.id === user.id ? (
-                              <span className="text-gray-600">{account.roleDescription || "Manager"}</span>
-                            ) : (
+                              <span className="text-gray-600">
+                                {formatRoleLabel(account.role)}
+                              </span>
+                            ) : editingRoleByUserId[account.id] ? (
                               <div className="flex items-center gap-2">
-                                <input
-                                  className="w-32 px-2 py-1 border border-gray-300 rounded-md"
-                                  value={roleByUserId[account.id] || ""}
+                                <select
+                                  className="w-36 px-2 py-1 border border-gray-300 rounded-md"
+                                  value={
+                                    roleFormByUserId[account.id]?.role ||
+                                    "DepartmentMember"
+                                  }
                                   onChange={(e) =>
-                                    setRoleByUserId((prev) => ({
+                                    setRoleFormByUserId((prev) => ({
                                       ...prev,
-                                      [account.id]: e.target.value,
+                                      [account.id]: {
+                                        ...prev[account.id],
+                                        role: e.target.value,
+                                      },
                                     }))
                                   }
-                                />
-                                <button
-                                  className="px-2 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-                                  onClick={() => handleUpdateRoleByAdmin(account)}
-                                  disabled={savingRoleUserId === account.id}
                                 >
-                                  {savingRoleUserId === account.id ? "..." : "Save"}
+                                  {USER_ROLE_OPTIONS.map((option) => (
+                                    <option
+                                      key={option.value}
+                                      value={option.value}
+                                    >
+                                      {option.label}
+                                    </option>
+                                  ))}
+                                </select>
+                                <button
+                                  className="px-2 py-1 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200"
+                                  onClick={() => {
+                                    setRoleFormByUserId((prev) => ({
+                                      ...prev,
+                                      [account.id]: {
+                                        role:
+                                          normalizeRole(account.role) ||
+                                          "DepartmentMember",
+                                        departmentId: account.departmentId
+                                          ? String(account.departmentId)
+                                          : "",
+                                      },
+                                    }));
+                                    setEditingRoleByUserId((prev) => ({
+                                      ...prev,
+                                      [account.id]: false,
+                                    }));
+                                  }}
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-2">
+                                <span className="text-gray-600">
+                                  {formatRoleLabel(account.role)}
+                                </span>
+                                <button
+                                  className="px-2 py-1 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200"
+                                  onClick={() =>
+                                    setEditingRoleByUserId((prev) => ({
+                                      ...prev,
+                                      [account.id]: true,
+                                    }))
+                                  }
+                                >
+                                  Edit
                                 </button>
                               </div>
                             )}
                           </td>
-                          <td className="py-2 px-2">{account.role}</td>
+                          <td className="py-2 px-2">
+                            {(() => {
+                              const currentRole =
+                                normalizeRole(account.role) ||
+                                "DepartmentMember";
+                              const currentDepartmentId = account.departmentId
+                                ? String(account.departmentId)
+                                : "";
+                              const selectedRole =
+                                roleFormByUserId[account.id]?.role ||
+                                currentRole;
+                              const selectedDepartmentId =
+                                roleFormByUserId[account.id]?.departmentId ||
+                                "";
+                              const roleChanged = selectedRole !== currentRole;
+                              const departmentChanged =
+                                isDepartmentRole(selectedRole) &&
+                                selectedDepartmentId !== currentDepartmentId;
+                              const isDirty = roleChanged || departmentChanged;
+
+                              if (account.id === user.id) {
+                                return (
+                                  <span className="text-gray-600">
+                                    {isDepartmentRole(currentRole)
+                                      ? account.departmentName || "-"
+                                      : "N/A"}
+                                  </span>
+                                );
+                              }
+
+                              if (!editingRoleByUserId[account.id]) {
+                                return (
+                                  <span className="text-gray-600">
+                                    {isDepartmentRole(currentRole)
+                                      ? account.departmentName || "-"
+                                      : "N/A"}
+                                  </span>
+                                );
+                              }
+
+                              return (
+                                <div className="flex items-center gap-2">
+                                  {isDepartmentRole(selectedRole) ? (
+                                    <select
+                                      className="w-36 px-2 py-1 border border-gray-300 rounded-md"
+                                      value={selectedDepartmentId}
+                                      onChange={(e) =>
+                                        setRoleFormByUserId((prev) => ({
+                                          ...prev,
+                                          [account.id]: {
+                                            ...prev[account.id],
+                                            departmentId: e.target.value,
+                                          },
+                                        }))
+                                      }
+                                    >
+                                      <option value="">
+                                        Select Department
+                                      </option>
+                                      {departments.map((department) => (
+                                        <option
+                                          key={department.id}
+                                          value={department.id}
+                                        >
+                                          {department.name}
+                                        </option>
+                                      ))}
+                                    </select>
+                                  ) : (
+                                    <span className="text-gray-500">N/A</span>
+                                  )}
+
+                                  {isDirty && (
+                                    <button
+                                      className="px-2 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                                      onClick={() =>
+                                        handleUpdateRoleByAdmin(account)
+                                      }
+                                      disabled={savingRoleUserId === account.id}
+                                    >
+                                      {savingRoleUserId === account.id
+                                        ? "..."
+                                        : "Save"}
+                                    </button>
+                                  )}
+                                </div>
+                              );
+                            })()}
+                          </td>
                           <td className="py-2 px-2">
                             {account.id === user.id ? (
                               <span className="text-gray-400">-</span>
@@ -402,7 +704,9 @@ function MePage() {
                                   type="password"
                                   placeholder="new password"
                                   className="w-32 px-2 py-1 border border-gray-300 rounded-md"
-                                  value={resetPasswordByUserId[account.id] || ""}
+                                  value={
+                                    resetPasswordByUserId[account.id] || ""
+                                  }
                                   onChange={(e) =>
                                     setResetPasswordByUserId((prev) => ({
                                       ...prev,
@@ -412,10 +716,14 @@ function MePage() {
                                 />
                                 <button
                                   className="px-2 py-1 bg-amber-500 text-white rounded-md hover:bg-amber-600"
-                                  onClick={() => handleResetPasswordByAdmin(account.id)}
+                                  onClick={() =>
+                                    handleResetPasswordByAdmin(account.id)
+                                  }
                                   disabled={resettingUserId === account.id}
                                 >
-                                  {resettingUserId === account.id ? "..." : "Reset"}
+                                  {resettingUserId === account.id
+                                    ? "..."
+                                    : "Reset"}
                                 </button>
                               </div>
                             )}
@@ -462,7 +770,9 @@ function MePage() {
       {showConfirmModal && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
-            <h3 className="text-base text-gray-900 mb-2">{deleteUserId ? "Delete User" : "Delete Account"}</h3>
+            <h3 className="text-base text-gray-900 mb-2">
+              {deleteUserId ? "Delete User" : "Delete Account"}
+            </h3>
             <p className="text-sm text-gray-600 mb-4">
               {deleteUserId
                 ? "This action is irreversible. Are you sure you want to delete this user?"
@@ -471,7 +781,9 @@ function MePage() {
             <div className="flex gap-2 justify-end">
               <button
                 className="px-3 py-2 bg-red-600 text-white rounded-lg text-xs hover:bg-red-700"
-                onClick={deleteUserId ? handleDeleteUserByAdmin : handleDeleteAccount}
+                onClick={
+                  deleteUserId ? handleDeleteUserByAdmin : handleDeleteAccount
+                }
                 disabled={deletingUserByAdmin}
               >
                 Yes, Delete
