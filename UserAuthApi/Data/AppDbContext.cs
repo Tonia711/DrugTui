@@ -46,6 +46,12 @@ namespace UserAuthApi.Data
                 .HasIndex(d => d.Name)
                 .IsUnique();
 
+            modelBuilder.Entity<User>()
+                .HasOne(u => u.Department)
+                .WithMany()
+                .HasForeignKey(u => u.DepartmentId)
+                .OnDelete(DeleteBehavior.SetNull);
+
             modelBuilder.Entity<Supplier>()
                 .HasIndex(s => s.Name)
                 .IsUnique();

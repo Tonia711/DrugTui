@@ -161,7 +161,9 @@ function InventoryPage() {
     }
   };
 
-  const inventoryData = medicines;
+  const inventoryData = medicines.filter(
+    (item) => !(item.status === "Expired" && item.isExpiredProcessed),
+  );
 
   const filteredData = inventoryData.filter((item) => {
     const hitKeyword =

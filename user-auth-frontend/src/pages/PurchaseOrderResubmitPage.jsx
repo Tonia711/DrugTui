@@ -237,7 +237,10 @@ function PurchaseOrderResubmitPage() {
 
   const canEditRejectedOrder = useMemo(() => {
     if (!currentUser || !order) return false;
-    const isManager = currentUser.role === "Admin";
+    const normalizedRole =
+      currentUser.role === "User" ? "DepartmentMember" : currentUser.role;
+    const isManager =
+      normalizedRole === "Admin" || normalizedRole === "WarehouseStaff";
     const isOwner =
       !!currentUser.id &&
       !!order.createdByUserId &&
@@ -315,15 +318,15 @@ function PurchaseOrderResubmitPage() {
   };
 
   const handleSubmit = async () => {
-      if (!orderId) {
-        setError("Order ID is missing.");
-        return;
-      }
-    
-      if (!canEditRejectedOrder) {
-        setError("You do not have permission to edit this order.");
-        return;
-      }
+    if (!orderId) {
+      setError("Order ID is missing.");
+      return;
+    }
+
+    if (!canEditRejectedOrder) {
+      setError("You do not have permission to edit this order.");
+      return;
+    }
 
     const normalizedItems = purchaseList
       .map((item) => ({

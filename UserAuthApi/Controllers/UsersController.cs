@@ -26,14 +26,41 @@ namespace UserAuthApi.Controllers
             _config = config;
         }
 
-        private static string GetRoleDisplay(User user)
+        private static readonly HashSet<string> AssignableRoles = new(StringComparer.OrdinalIgnoreCase)
         {
-            if (user.Role == "Admin")
+            "WarehouseStaff",
+            "DepartmentMember"
+        };
+
+        private static string NormalizeRole(string? role)
+        {
+            var normalized = role?.Trim();
+            if (string.IsNullOrWhiteSpace(normalized))
             {
-                return "Manager";
+                return "DepartmentMember";
             }
 
-            return string.IsNullOrWhiteSpace(user.Bio) ? user.Role : user.Bio;
+            if (normalized.Equals("User", StringComparison.OrdinalIgnoreCase))
+            {
+                return "DepartmentMember";
+            }
+
+            if (normalized.Equals("WarehouseStaff", StringComparison.OrdinalIgnoreCase))
+            {
+                return "WarehouseStaff";
+            }
+
+            if (normalized.Equals("DepartmentMember", StringComparison.OrdinalIgnoreCase))
+            {
+                return "DepartmentMember";
+            }
+
+            if (normalized.Equals("Admin", StringComparison.OrdinalIgnoreCase))
+            {
+                return "Admin";
+            }
+
+            return normalized;
         }
 
         // POST /Users/register
@@ -47,12 +74,32 @@ namespace UserAuthApi.Controllers
                 return BadRequest("Email already registered.");
             }
 
+            var targetRole = NormalizeRole(dto.Role);
+            if (!AssignableRoles.Contains(targetRole))
+            {
+                return BadRequest("Role must be WarehouseStaff or DepartmentMember.");
+            }
+
+            if (targetRole == "DepartmentMember")
+            {
+                if (!dto.DepartmentId.HasValue)
+                {
+                    return BadRequest("Department member must be assigned to a department.");
+                }
+
+                if (!_context.Departments.Any(d => d.Id == dto.DepartmentId.Value))
+                {
+                    return BadRequest("Department does not exist.");
+                }
+            }
+
             var user = new User
             {
                 Username = dto.Username,
                 Email = dto.Email,
-                Role = "User",
-                Bio = string.IsNullOrWhiteSpace(dto.RoleDescription) ? dto.Bio : dto.RoleDescription
+                Role = targetRole,
+                DepartmentId = targetRole == "DepartmentMember" ? dto.DepartmentId : null,
+                Bio = dto.Bio
             };
 
             user.PasswordHash = _hasher.HashPassword(user, dto.Password);
@@ -115,8 +162,11 @@ namespace UserAuthApi.Controllers
                     user.Id,
                     user.Username,
                     user.Email,
-                    user.Role,
-                    roleDescription = GetRoleDisplay(user)
+                    Role = NormalizeRole(user.Role),
+                    user.DepartmentId,
+                    DepartmentName = user.DepartmentId.HasValue
+                        ? _context.Departments.Where(d => d.Id == user.DepartmentId.Value).Select(d => d.Name).FirstOrDefault()
+                        : null
                 }
             });
         }
@@ -142,13 +192,18 @@ namespace UserAuthApi.Controllers
                 return NotFound("User not found.");
             }
 
+            var normalizedRole = NormalizeRole(user.Role);
+
             return Ok(new
             {
                 user.Id,
                 user.Username,
                 user.Email,
-                user.Role,
-                roleDescription = GetRoleDisplay(user)
+                Role = normalizedRole,
+                user.DepartmentId,
+                DepartmentName = user.DepartmentId.HasValue
+                    ? _context.Departments.Where(d => d.Id == user.DepartmentId.Value).Select(d => d.Name).FirstOrDefault()
+                    : null
             });
         }
 
@@ -177,11 +232,6 @@ namespace UserAuthApi.Controllers
                 return BadRequest("Username already exists.");
             }
 
-            if (user.Role == "Admin" && string.IsNullOrWhiteSpace(dto.RoleDescription))
-            {
-                return BadRequest("Admin role cannot be empty.");
-            }
-
             user.Username = dto.Username;
             user.Bio = dto.RoleDescription;
 
@@ -192,8 +242,11 @@ namespace UserAuthApi.Controllers
                 user.Id,
                 user.Username,
                 user.Email,
-                user.Role,
-                roleDescription = GetRoleDisplay(user)
+                Role = NormalizeRole(user.Role),
+                user.DepartmentId,
+                DepartmentName = user.DepartmentId.HasValue
+                    ? _context.Departments.Where(d => d.Id == user.DepartmentId.Value).Select(d => d.Name).FirstOrDefault()
+                    : null
             });
         }
 
@@ -268,8 +321,9 @@ namespace UserAuthApi.Controllers
                     u.Id,
                     u.Username,
                     u.Email,
-                    u.Role,
-                    roleDescription = u.Role == "Admin" ? "Manager" : (string.IsNullOrWhiteSpace(u.Bio) ? u.Role : u.Bio)
+                    Role = u.Role == "User" ? "DepartmentMember" : u.Role,
+                    u.DepartmentId,
+                    DepartmentName = u.Department != null ? u.Department.Name : null
                 })
                 .ToList();
 
@@ -306,9 +360,23 @@ namespace UserAuthApi.Controllers
         [Authorize(Roles = "Admin")]
         public IActionResult UpdateUserRoleByAdmin(int id, UpdateUserRoleByAdminDto dto)
         {
-            if (string.IsNullOrWhiteSpace(dto.RoleDescription))
+            var targetRole = NormalizeRole(dto.Role);
+            if (!AssignableRoles.Contains(targetRole))
             {
-                return BadRequest("Role cannot be empty.");
+                return BadRequest("Role must be WarehouseStaff or DepartmentMember.");
+            }
+
+            if (targetRole == "DepartmentMember")
+            {
+                if (!dto.DepartmentId.HasValue)
+                {
+                    return BadRequest("Department member must be assigned to a department.");
+                }
+
+                if (!_context.Departments.Any(d => d.Id == dto.DepartmentId.Value))
+                {
+                    return BadRequest("Department does not exist.");
+                }
             }
 
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
@@ -323,7 +391,8 @@ namespace UserAuthApi.Controllers
                 return NotFound("User not found.");
             }
 
-            targetUser.Bio = dto.RoleDescription.Trim();
+            targetUser.Role = targetRole;
+            targetUser.DepartmentId = targetRole == "DepartmentMember" ? dto.DepartmentId : null;
             _context.SaveChanges();
 
             return Ok(new
@@ -334,8 +403,11 @@ namespace UserAuthApi.Controllers
                     targetUser.Id,
                     targetUser.Username,
                     targetUser.Email,
-                    targetUser.Role,
-                    roleDescription = GetRoleDisplay(targetUser)
+                    Role = NormalizeRole(targetUser.Role),
+                    targetUser.DepartmentId,
+                    DepartmentName = targetUser.DepartmentId.HasValue
+                        ? _context.Departments.Where(d => d.Id == targetUser.DepartmentId.Value).Select(d => d.Name).FirstOrDefault()
+                        : null
                 }
             });
         }

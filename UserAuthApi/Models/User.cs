@@ -18,7 +18,10 @@ namespace UserAuthApi.Models
 
         [Required]
         [StringLength(20)]
-        public string Role { get; set; } = "User";
+        public string Role { get; set; } = "DepartmentMember";
+
+        public int? DepartmentId { get; set; }
+        public Department? Department { get; set; }
 
         public string? Bio { get; set; }
     }

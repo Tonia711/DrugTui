@@ -1,19 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { ChevronDown, PackageOpen, Plus, Search, X } from "lucide-react";
+import { useLocation, useNavigate } from "react-router-dom";
+import { ChevronDown, PackageOpen, Search } from "lucide-react";
 import StatusBadge from "../components/StatusBadge";
-import { departmentApi, departmentRequestApi } from "../util/api";
-
-const initialCreateForm = {
-  requestNumber: "",
-  status: "Pending Acceptance",
-  departmentId: "",
-  requestedAt: "",
-  notes: "",
-  itemDescription: "",
-  quantityRequested: 1,
-  quantityApproved: 0,
-};
+import { departmentRequestApi } from "../util/api";
 
 const defaultStatuses = [
   "Pending Acceptance",
@@ -45,16 +34,13 @@ const getErrorMessage = (error, fallback) => {
 };
 
 function DepartmentRequestPage() {
+  const location = useLocation();
   const navigate = useNavigate();
   const [keyword, setKeyword] = useState("");
   const [selectedStatus, setSelectedStatus] = useState(null);
   const [showStatusDropdown, setShowStatusDropdown] = useState(false);
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [createForm, setCreateForm] = useState(initialCreateForm);
   const [requests, setRequests] = useState([]);
-  const [departments, setDepartments] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
@@ -70,15 +56,6 @@ function DepartmentRequestPage() {
       setError(getErrorMessage(err, "Failed to load department requests."));
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const loadDepartments = async () => {
-    try {
-      const res = await departmentApi.getAll();
-      setDepartments(Array.isArray(res.data) ? res.data : []);
-    } catch {
-      setDepartments([]);
     }
   };
 
@@ -98,8 +75,14 @@ function DepartmentRequestPage() {
 
   useEffect(() => {
     loadRequests();
-    loadDepartments();
   }, []);
+
+  useEffect(() => {
+    if (location.state?.message) {
+      setMessage(location.state.message);
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [location.pathname, location.state, navigate]);
 
   const requestsData = useMemo(
     () =>
@@ -183,47 +166,6 @@ function DepartmentRequestPage() {
     });
   }, [keyword, selectedStatus, requestsData]);
 
-  const handleCreateRequest = async (event) => {
-    event.preventDefault();
-    setMessage("");
-    setError("");
-
-    if (!createForm.departmentId) {
-      setError("Please select a department.");
-      return;
-    }
-
-    setIsSubmitting(true);
-    try {
-      await departmentRequestApi.create({
-        requestNumber: createForm.requestNumber.trim(),
-        status: createForm.status,
-        departmentId: Number(createForm.departmentId),
-        requestedAt: createForm.requestedAt
-          ? new Date(createForm.requestedAt).toISOString()
-          : null,
-        notes: createForm.notes.trim() || null,
-        items: [
-          {
-            medicationId: null,
-            description: createForm.itemDescription.trim(),
-            quantityRequested: Number(createForm.quantityRequested),
-            quantityApproved: Number(createForm.quantityApproved),
-          },
-        ],
-      });
-
-      setShowCreateModal(false);
-      setCreateForm(initialCreateForm);
-      setMessage("Department request created successfully.");
-      await loadRequests();
-    } catch (err) {
-      setError(getErrorMessage(err, "Failed to create department request."));
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
   const getStatusClassName = (status) => {
     if (status === "Rejected" || status === "Accepted - Awaiting Restock") {
       return "bg-red-100 text-red-700";
@@ -241,14 +183,6 @@ function DepartmentRequestPage() {
           <PackageOpen size={14} />
           <span>Department Request</span>
         </div>
-        <button
-          type="button"
-          onClick={() => setShowCreateModal(true)}
-          className="flex items-center gap-2 bg-green-600 text-white px-3 py-1.5 rounded-lg hover:bg-green-700 transition-colors"
-        >
-          <Plus size={14} />
-          <span className="text-xs">Add New Request</span>
-        </button>
       </div>
 
       {message && (
@@ -435,149 +369,6 @@ function DepartmentRequestPage() {
         </div>
       </div>
 
-      {showCreateModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <form
-            onSubmit={handleCreateRequest}
-            className="bg-white rounded-lg shadow-xl max-w-lg w-full p-6"
-          >
-            <div className="flex items-center justify-between mb-5">
-              <h2 className="text-sm text-gray-900">
-                Add New Department Request
-              </h2>
-              <button
-                type="button"
-                onClick={() => setShowCreateModal(false)}
-                className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg"
-              >
-                <X size={16} />
-              </button>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <input
-                className="px-3 py-2 border border-gray-300 rounded-lg text-xs"
-                placeholder="Request Number"
-                value={createForm.requestNumber}
-                onChange={(e) =>
-                  setCreateForm((prev) => ({
-                    ...prev,
-                    requestNumber: e.target.value,
-                  }))
-                }
-                required
-              />
-              <select
-                className="px-3 py-2 border border-gray-300 rounded-lg text-xs"
-                value={createForm.status}
-                onChange={(e) =>
-                  setCreateForm((prev) => ({ ...prev, status: e.target.value }))
-                }
-              >
-                {defaultStatuses.map((status) => (
-                  <option key={status} value={status}>
-                    {status}
-                  </option>
-                ))}
-              </select>
-              <select
-                className="px-3 py-2 border border-gray-300 rounded-lg text-xs"
-                value={createForm.departmentId}
-                onChange={(e) =>
-                  setCreateForm((prev) => ({
-                    ...prev,
-                    departmentId: e.target.value,
-                  }))
-                }
-                required
-              >
-                <option value="">Select Department</option>
-                {departments.map((department) => (
-                  <option key={department.id} value={department.id}>
-                    {department.name}
-                  </option>
-                ))}
-              </select>
-              <input
-                type="datetime-local"
-                className="px-3 py-2 border border-gray-300 rounded-lg text-xs"
-                value={createForm.requestedAt}
-                onChange={(e) =>
-                  setCreateForm((prev) => ({
-                    ...prev,
-                    requestedAt: e.target.value,
-                  }))
-                }
-              />
-              <input
-                className="md:col-span-2 px-3 py-2 border border-gray-300 rounded-lg text-xs"
-                placeholder="Item Description"
-                value={createForm.itemDescription}
-                onChange={(e) =>
-                  setCreateForm((prev) => ({
-                    ...prev,
-                    itemDescription: e.target.value,
-                  }))
-                }
-                required
-              />
-              <input
-                type="number"
-                min="1"
-                className="px-3 py-2 border border-gray-300 rounded-lg text-xs"
-                placeholder="Quantity Requested"
-                value={createForm.quantityRequested}
-                onChange={(e) =>
-                  setCreateForm((prev) => ({
-                    ...prev,
-                    quantityRequested: e.target.value,
-                  }))
-                }
-                required
-              />
-              <input
-                type="number"
-                min="0"
-                className="px-3 py-2 border border-gray-300 rounded-lg text-xs"
-                placeholder="Quantity Approved"
-                value={createForm.quantityApproved}
-                onChange={(e) =>
-                  setCreateForm((prev) => ({
-                    ...prev,
-                    quantityApproved: e.target.value,
-                  }))
-                }
-              />
-              <textarea
-                rows={3}
-                className="md:col-span-2 px-3 py-2 border border-gray-300 rounded-lg text-xs"
-                placeholder="Notes"
-                value={createForm.notes}
-                onChange={(e) =>
-                  setCreateForm((prev) => ({ ...prev, notes: e.target.value }))
-                }
-              />
-            </div>
-
-            <div className="flex gap-2 mt-4">
-              <button
-                type="button"
-                onClick={() => setShowCreateModal(false)}
-                className="flex-1 px-4 py-2 text-xs bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="flex-1 px-4 py-2 text-xs bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-60"
-              >
-                {isSubmitting ? "Creating..." : "Create Request"}
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
     </div>
   );
 }

@@ -45,8 +45,15 @@ export default function useAxios({ method, url, body = null, runOnMount = true }
         }
     }, [url, refreshToken]);
 
-    // Trigger the effect manually by toggling refreshToken
-    const refresh = () => setRefreshToken((prev) => !prev);
+    // Manually trigger a fresh request
+    const refresh = async (customBody = body) => {
+        if (runOnMount) {
+            setRefreshToken((prev) => !prev);
+            return;
+        }
+
+        await sendRequest(customBody);
+    };
 
     return { data, isLoading, error, refresh, sendRequest };
 }

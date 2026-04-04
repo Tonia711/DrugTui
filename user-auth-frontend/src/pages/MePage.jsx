@@ -3,6 +3,23 @@ import { useNavigate } from "react-router-dom";
 import useAxios from "../hooks/useAxios";
 import api from "../util/api";
 
+const USER_ROLE_OPTIONS = [
+  { value: "WarehouseStaff", label: "Warehouse Staff" },
+  { value: "DepartmentMember", label: "Department Member" },
+];
+
+const normalizeRole = (role) => (role === "User" ? "DepartmentMember" : role);
+
+const isDepartmentRole = (role) => normalizeRole(role) === "DepartmentMember";
+
+const formatRoleLabel = (role) => {
+  const normalizedRole = normalizeRole(role);
+  if (normalizedRole === "Admin") return "Admin";
+  if (normalizedRole === "WarehouseStaff") return "Warehouse Staff";
+  if (normalizedRole === "DepartmentMember") return "Department Member";
+  return normalizedRole || "-";
+};
+
 function MePage() {
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [currentPassword, setCurrentPassword] = useState("");
@@ -12,7 +29,8 @@ function MePage() {
     username: "",
     email: "",
     password: "",
-    roleDescription: "",
+    role: "DepartmentMember",
+    departmentId: "",
   });
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
@@ -24,7 +42,9 @@ function MePage() {
   const [deletingUserByAdmin, setDeletingUserByAdmin] = useState(false);
   const [resettingUserId, setResettingUserId] = useState(null);
   const [savingRoleUserId, setSavingRoleUserId] = useState(null);
-  const [roleByUserId, setRoleByUserId] = useState({});
+  const [roleFormByUserId, setRoleFormByUserId] = useState({});
+  const [editingRoleByUserId, setEditingRoleByUserId] = useState({});
+  const [departments, setDepartments] = useState([]);
   const [loadedAdminUsers, setLoadedAdminUsers] = useState(false);
   const navigate = useNavigate();
 
@@ -64,7 +84,7 @@ function MePage() {
     runOnMount: false,
   });
 
-  const isAdmin = user?.role === "Admin";
+  const isAdmin = normalizeRole(user?.role) === "Admin";
 
   useEffect(() => {
     if (isAdmin && !loadedAdminUsers) {
@@ -74,13 +94,35 @@ function MePage() {
   }, [isAdmin, loadedAdminUsers]);
 
   useEffect(() => {
+    const loadDepartments = async () => {
+      if (!isAdmin) return;
+      try {
+        const res = await api.get("/Departments");
+        const data = Array.isArray(res.data) ? res.data : [];
+        setDepartments(data);
+        setAdminForm((prev) => ({
+          ...prev,
+          departmentId: prev.departmentId || (data[0] ? String(data[0].id) : ""),
+        }));
+      } catch {
+        setDepartments([]);
+      }
+    };
+
+    loadDepartments();
+  }, [isAdmin]);
+
+  useEffect(() => {
     if (!users?.length) return;
 
-    const nextRoles = {};
+    const nextRoleForms = {};
     users.forEach((account) => {
-      nextRoles[account.id] = account.roleDescription || "";
+      nextRoleForms[account.id] = {
+        role: normalizeRole(account.role) || "DepartmentMember",
+        departmentId: account.departmentId ? String(account.departmentId) : "",
+      };
     });
-    setRoleByUserId(nextRoles);
+    setRoleFormByUserId(nextRoleForms);
   }, [users]);
 
   const handleChangePassword = async () => {
@@ -111,7 +153,13 @@ function MePage() {
 
     try {
       await createUser(adminForm);
-      setAdminForm({ username: "", email: "", password: "", roleDescription: "" });
+      setAdminForm((prev) => ({
+        username: "",
+        email: "",
+        password: "",
+        role: "DepartmentMember",
+        departmentId: prev.departmentId,
+      }));
       setAdminMessage("User created successfully.");
       refreshUsers();
     } catch (err) {
@@ -157,17 +205,30 @@ function MePage() {
   };
 
   const handleUpdateRoleByAdmin = async (account) => {
-    const roleText = (roleByUserId[account.id] || "").trim();
-    if (!roleText) {
-      setAdminError("Role cannot be empty.");
+    const form = roleFormByUserId[account.id];
+    if (!form?.role) {
+      setAdminError("Please select a role.");
+      return;
+    }
+
+    if (
+      form.role === "DepartmentMember" &&
+      (!form.departmentId || Number(form.departmentId) <= 0)
+    ) {
+      setAdminError("Department member must be assigned to a department.");
       return;
     }
 
     try {
       setSavingRoleUserId(account.id);
       setAdminError("");
-      await api.put(`/Users/${account.id}/role`, { roleDescription: roleText });
+      await api.put(`/Users/${account.id}/role`, {
+        role: form.role,
+        departmentId:
+          form.role === "DepartmentMember" ? Number(form.departmentId) : null,
+      });
       setAdminMessage("Role updated successfully.");
+      setEditingRoleByUserId((prev) => ({ ...prev, [account.id]: false }));
       refreshUsers();
     } catch (err) {
       setAdminError(err.response?.data || "Failed to update role.");
@@ -200,7 +261,7 @@ function MePage() {
                 <p className="text-xs text-gray-500">{user.email}</p>
               </div>
               <span className="inline-flex items-center rounded-full bg-gray-100 px-3 py-1 text-xs text-gray-700">
-                {user.role}
+                {normalizeRole(user.role)}
               </span>
             </div>
             {message && <p className="text-sm text-green-700 mt-3">{message}</p>}
@@ -210,7 +271,13 @@ function MePage() {
           <div className="bg-white border border-gray-200 rounded-lg p-5">
             <h2 className="text-sm text-gray-900 mb-3">Role</h2>
             <p className="text-sm text-gray-700">
-              {user.role === "Admin" ? "Manager" : user.roleDescription || "No role yet."}
+              {normalizeRole(user.role) === "Admin"
+                ? "Manager"
+                : normalizeRole(user.role) === "WarehouseStaff"
+                  ? "Warehouse Staff"
+                  : normalizeRole(user.role) === "DepartmentMember"
+                    ? `Department Member${user.departmentName ? ` (${user.departmentName})` : ""}`
+                    : "No role assigned."}
             </p>
           </div>
 
@@ -318,16 +385,43 @@ function MePage() {
                 </div>
 
                 <div>
-                  <label className="block text-xs text-gray-600 mb-1">Role</label>
-                  <input
+                  <label className="block text-xs text-gray-600 mb-1">Role Type</label>
+                  <select
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-gray-200"
-                    value={adminForm.roleDescription}
+                    value={adminForm.role}
                     onChange={(e) =>
-                      setAdminForm((prev) => ({ ...prev, roleDescription: e.target.value }))
+                      setAdminForm((prev) => ({ ...prev, role: e.target.value }))
                     }
                     required
-                  />
+                  >
+                    {USER_ROLE_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
                 </div>
+
+                {adminForm.role === "DepartmentMember" && (
+                  <div>
+                    <label className="block text-xs text-gray-600 mb-1">Department</label>
+                    <select
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-gray-200"
+                      value={adminForm.departmentId}
+                      onChange={(e) =>
+                        setAdminForm((prev) => ({ ...prev, departmentId: e.target.value }))
+                      }
+                      required
+                    >
+                      <option value="">Select Department</option>
+                      {departments.map((department) => (
+                        <option key={department.id} value={department.id}>
+                          {department.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
 
                 <div className="md:col-span-2">
                   <button className="px-3 py-2 bg-blue-600 text-white rounded-lg text-xs hover:bg-blue-700" type="submit" disabled={creatingUser}>
@@ -346,8 +440,8 @@ function MePage() {
                       <th className="text-left py-2 px-2 text-gray-600">ID</th>
                       <th className="text-left py-2 px-2 text-gray-600">Username</th>
                       <th className="text-left py-2 px-2 text-gray-600">Email</th>
-                      <th className="text-left py-2 px-2 text-gray-600">Role</th>
-                      <th className="text-left py-2 px-2 text-gray-600">Role</th>
+                      <th className="text-left py-2 px-2 text-gray-600">Role Type</th>
+                      <th className="text-left py-2 px-2 text-gray-600">Department</th>
                       <th className="text-left py-2 px-2 text-gray-600">Reset Password</th>
                       <th className="text-left py-2 px-2 text-gray-600">Delete</th>
                     </tr>
@@ -369,30 +463,134 @@ function MePage() {
                           <td className="py-2 px-2">{account.email}</td>
                           <td className="py-2 px-2">
                             {account.id === user.id ? (
-                              <span className="text-gray-600">{account.roleDescription || "Manager"}</span>
-                            ) : (
+                              <span className="text-gray-600">{formatRoleLabel(account.role)}</span>
+                            ) : editingRoleByUserId[account.id] ? (
                               <div className="flex items-center gap-2">
-                                <input
-                                  className="w-32 px-2 py-1 border border-gray-300 rounded-md"
-                                  value={roleByUserId[account.id] || ""}
+                                <select
+                                  className="w-36 px-2 py-1 border border-gray-300 rounded-md"
+                                  value={roleFormByUserId[account.id]?.role || "DepartmentMember"}
                                   onChange={(e) =>
-                                    setRoleByUserId((prev) => ({
+                                    setRoleFormByUserId((prev) => ({
                                       ...prev,
-                                      [account.id]: e.target.value,
+                                      [account.id]: {
+                                        ...prev[account.id],
+                                        role: e.target.value,
+                                      },
                                     }))
                                   }
-                                />
-                                <button
-                                  className="px-2 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-                                  onClick={() => handleUpdateRoleByAdmin(account)}
-                                  disabled={savingRoleUserId === account.id}
                                 >
-                                  {savingRoleUserId === account.id ? "..." : "Save"}
+                                  {USER_ROLE_OPTIONS.map((option) => (
+                                    <option key={option.value} value={option.value}>
+                                      {option.label}
+                                    </option>
+                                  ))}
+                                </select>
+                                <button
+                                  className="px-2 py-1 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200"
+                                  onClick={() => {
+                                    setRoleFormByUserId((prev) => ({
+                                      ...prev,
+                                      [account.id]: {
+                                        role: normalizeRole(account.role) || "DepartmentMember",
+                                        departmentId: account.departmentId ? String(account.departmentId) : "",
+                                      },
+                                    }));
+                                    setEditingRoleByUserId((prev) => ({ ...prev, [account.id]: false }));
+                                  }}
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-2">
+                                <span className="text-gray-600">{formatRoleLabel(account.role)}</span>
+                                <button
+                                  className="px-2 py-1 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200"
+                                  onClick={() =>
+                                    setEditingRoleByUserId((prev) => ({ ...prev, [account.id]: true }))
+                                  }
+                                >
+                                  Edit
                                 </button>
                               </div>
                             )}
                           </td>
-                          <td className="py-2 px-2">{account.role}</td>
+                          <td className="py-2 px-2">
+                            {(() => {
+                              const currentRole = normalizeRole(account.role) || "DepartmentMember";
+                              const currentDepartmentId = account.departmentId
+                                ? String(account.departmentId)
+                                : "";
+                              const selectedRole =
+                                roleFormByUserId[account.id]?.role || currentRole;
+                              const selectedDepartmentId =
+                                roleFormByUserId[account.id]?.departmentId || "";
+                              const roleChanged = selectedRole !== currentRole;
+                              const departmentChanged =
+                                isDepartmentRole(selectedRole) &&
+                                selectedDepartmentId !== currentDepartmentId;
+                              const isDirty = roleChanged || departmentChanged;
+
+                              if (account.id === user.id) {
+                                return (
+                                  <span className="text-gray-600">
+                                    {isDepartmentRole(currentRole)
+                                      ? account.departmentName || "-"
+                                      : "N/A"}
+                                  </span>
+                                );
+                              }
+
+                              if (!editingRoleByUserId[account.id]) {
+                                return (
+                                  <span className="text-gray-600">
+                                    {isDepartmentRole(currentRole)
+                                      ? account.departmentName || "-"
+                                      : "N/A"}
+                                  </span>
+                                );
+                              }
+
+                              return (
+                                <div className="flex items-center gap-2">
+                                  {isDepartmentRole(selectedRole) ? (
+                                    <select
+                                      className="w-36 px-2 py-1 border border-gray-300 rounded-md"
+                                      value={selectedDepartmentId}
+                                      onChange={(e) =>
+                                        setRoleFormByUserId((prev) => ({
+                                          ...prev,
+                                          [account.id]: {
+                                            ...prev[account.id],
+                                            departmentId: e.target.value,
+                                          },
+                                        }))
+                                      }
+                                    >
+                                      <option value="">Select Department</option>
+                                      {departments.map((department) => (
+                                        <option key={department.id} value={department.id}>
+                                          {department.name}
+                                        </option>
+                                      ))}
+                                    </select>
+                                  ) : (
+                                    <span className="text-gray-500">N/A</span>
+                                  )}
+
+                                  {isDirty && (
+                                    <button
+                                      className="px-2 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                                      onClick={() => handleUpdateRoleByAdmin(account)}
+                                      disabled={savingRoleUserId === account.id}
+                                    >
+                                      {savingRoleUserId === account.id ? "..." : "Save"}
+                                    </button>
+                                  )}
+                                </div>
+                              );
+                            })()}
+                          </td>
                           <td className="py-2 px-2">
                             {account.id === user.id ? (
                               <span className="text-gray-400">-</span>
