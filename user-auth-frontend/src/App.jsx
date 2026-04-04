@@ -15,6 +15,7 @@ import InvoicePage from "./pages/InvoicePage";
 import InvoiceDetailsPage from "./pages/InvoiceDetailsPage";
 import DepartmentRequestPage from "./pages/DepartmentRequestPage";
 import DepartmentRequestCreatePage from "./pages/DepartmentRequestCreatePage";
+import DepartmentRequestMinePage from "./pages/DepartmentRequestMinePage";
 import DepartmentRequestDetailsPage from "./pages/DepartmentRequestDetailsPage";
 import StorageZonePage from "./pages/StorageZonePage";
 import ReportsPage from "./pages/ReportsPage";
@@ -99,17 +100,25 @@ function App() {
         <Route
           path="department-request/new"
           element={
-            <RoleProtectedRoute
-              allowedRoles={["DepartmentMember", "User"]}
-            >
+            <RoleProtectedRoute allowedRoles={["DepartmentMember", "User"]}>
               <DepartmentRequestCreatePage />
+            </RoleProtectedRoute>
+          }
+        />
+        <Route
+          path="department-request/mine"
+          element={
+            <RoleProtectedRoute allowedRoles={["DepartmentMember", "User"]}>
+              <DepartmentRequestMinePage />
             </RoleProtectedRoute>
           }
         />
         <Route
           path="department-request/:requestId"
           element={
-            <RoleProtectedRoute allowedRoles={["Admin", "WarehouseStaff"]}>
+            <RoleProtectedRoute
+              allowedRoles={["Admin", "WarehouseStaff", "DepartmentMember", "User"]}
+            >
               <DepartmentRequestDetailsPage />
             </RoleProtectedRoute>
           }

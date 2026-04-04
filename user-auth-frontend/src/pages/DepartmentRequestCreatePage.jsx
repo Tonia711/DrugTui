@@ -126,7 +126,8 @@ function DepartmentRequestCreatePage() {
         const res = await api.get("/Users/me");
         const me = res.data || null;
         setCurrentUser(me);
-        const normalizedRole = me?.role === "User" ? "DepartmentMember" : me?.role;
+        const normalizedRole =
+          me?.role === "User" ? "DepartmentMember" : me?.role;
         if (normalizedRole === "DepartmentMember" && me?.departmentId) {
           setDepartmentId(String(me.departmentId));
         }
@@ -233,7 +234,8 @@ function DepartmentRequestCreatePage() {
     const normalizedItems = requestList
       .map((item) => ({
         medicationId: null,
-        description: `${item.name}${item.specification ? ` ${item.specification}` : ""}`.trim(),
+        description:
+          `${item.name}${item.specification ? ` ${item.specification}` : ""}`.trim(),
         quantityRequested: Math.max(1, Number(item.quantityRequested) || 1),
         quantityApproved: 0,
       }))
@@ -256,7 +258,7 @@ function DepartmentRequestCreatePage() {
       });
 
       localStorage.removeItem(DRAFT_KEY);
-      navigate("/department-request", {
+      navigate("/department-request/mine", {
         replace: true,
         state: { message: "Department request created successfully." },
       });
@@ -272,7 +274,7 @@ function DepartmentRequestCreatePage() {
       <div className="flex items-center gap-1.5 text-xs text-gray-500 mb-6">
         <button
           type="button"
-          onClick={() => navigate("/department-request")}
+          onClick={() => navigate("/department-request/mine")}
           className="flex items-center gap-1 text-gray-600 hover:text-gray-900 transition-colors mr-2"
         >
           <ArrowLeft size={16} />
@@ -343,7 +345,9 @@ function DepartmentRequestCreatePage() {
                 >
                   <div className="flex items-start justify-between mb-2">
                     <div className="flex-1">
-                      <div className="text-xs text-gray-900 mb-1">{item.name}</div>
+                      <div className="text-xs text-gray-900 mb-1">
+                        {item.name}
+                      </div>
                       {item.specification && (
                         <div className="text-[10px] text-gray-500 mb-1">
                           {item.specification}
@@ -351,7 +355,10 @@ function DepartmentRequestCreatePage() {
                       )}
                       <div className="flex items-center gap-3">
                         <div className="text-[10px] text-gray-500">
-                          Last Order: <span className="text-gray-900">{item.lastOrderQty} units</span>
+                          Last Order:{" "}
+                          <span className="text-gray-900">
+                            {item.lastOrderQty} units
+                          </span>
                         </div>
                         <div
                           className={`text-[10px] px-2 py-0.5 rounded ${
@@ -394,7 +401,8 @@ function DepartmentRequestCreatePage() {
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-green-500"
                 disabled={
                   isLoadingDepartments ||
-                  (currentUser?.role === "DepartmentMember" || currentUser?.role === "User")
+                  currentUser?.role === "DepartmentMember" ||
+                  currentUser?.role === "User"
                 }
               >
                 <option value="">Select Department</option>
@@ -407,13 +415,19 @@ function DepartmentRequestCreatePage() {
             </div>
 
             <div className="mb-4">
-              <div className="text-[10px] text-gray-500">{requestList.length} Items</div>
+              <div className="text-[10px] text-gray-500">
+                {requestList.length} Items
+              </div>
             </div>
 
             {requestList.length === 0 ? (
               <div className="py-12 text-center">
-                <div className="text-xs text-gray-400 mb-1">No items added yet</div>
-                <div className="text-[10px] text-gray-400">Add items using manual entry</div>
+                <div className="text-xs text-gray-400 mb-1">
+                  No items added yet
+                </div>
+                <div className="text-[10px] text-gray-400">
+                  Add items using manual entry
+                </div>
               </div>
             ) : (
               <div className="space-y-2 mb-6 max-h-[400px] overflow-y-auto">
@@ -423,7 +437,9 @@ function DepartmentRequestCreatePage() {
                       <div className="flex-1">
                         <div className="text-xs text-gray-900">{item.name}</div>
                         {item.specification && (
-                          <div className="text-[10px] text-gray-500">{item.specification}</div>
+                          <div className="text-[10px] text-gray-500">
+                            {item.specification}
+                          </div>
                         )}
                       </div>
                       <button
@@ -440,7 +456,10 @@ function DepartmentRequestCreatePage() {
                         type="number"
                         value={item.quantityRequested}
                         onChange={(event) =>
-                          handleQuantityChange(item.id, Number.parseInt(event.target.value, 10) || 1)
+                          handleQuantityChange(
+                            item.id,
+                            Number.parseInt(event.target.value, 10) || 1,
+                          )
                         }
                         className="w-20 px-2 py-1 border border-gray-300 rounded text-xs focus:outline-none focus:ring-2 focus:ring-green-500"
                         min="1"
@@ -452,7 +471,9 @@ function DepartmentRequestCreatePage() {
             )}
 
             <div className="space-y-3 mb-2">
-              <label className="block text-xs text-gray-700">Request Notes</label>
+              <label className="block text-xs text-gray-700">
+                Request Notes
+              </label>
               <textarea
                 rows={3}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-green-500 resize-none"

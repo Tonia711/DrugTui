@@ -1,4 +1,4 @@
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Navigate } from "react-router-dom";
 import useAxios from "../hooks/useAxios";
 import {
   Package,
@@ -24,10 +24,23 @@ function HomePage() {
   const navigate = useNavigate();
   const DESIGN_PARITY_MODE = true;
 
+  const { data: currentUser } = useAxios({
+    method: "get",
+    url: "/Users/me",
+  });
+
   const { data: medicines } = useAxios({
     method: "get",
     url: "/Medicines",
   });
+
+  const normalizedRole =
+    currentUser?.role === "User" ? "DepartmentMember" : currentUser?.role;
+
+  // Redirect DepartmentMember to Inventory instead of showing dashboard
+  if (normalizedRole === "DepartmentMember") {
+    return <Navigate to="/inventory" replace />;
+  }
 
   const inventoryData = (medicines || []).map((item) => {
     const isLowStock = item.stockQuantity <= item.reorderLevel;

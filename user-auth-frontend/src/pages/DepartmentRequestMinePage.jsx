@@ -1,8 +1,18 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { ChevronDown, PackageOpen, Search } from "lucide-react";
-import StatusBadge from "../components/StatusBadge";
+import {
+  ChevronDown,
+  Eye,
+  PackageOpen,
+  Plus,
+  RefreshCcw,
+  Search,
+  Trash2,
+} from "lucide-react";
 import { departmentRequestApi } from "../util/api";
+import useAxios from "../hooks/useAxios";
+
+const DRAFT_KEY = "departmentRequestDraft";
 
 const defaultStatuses = [
   "Pending Acceptance",
@@ -33,9 +43,21 @@ const getErrorMessage = (error, fallback) => {
   return data.title || fallback;
 };
 
-function DepartmentRequestPage() {
+const getStatusClassName = (status) => {
+  if (status === "Rejected" || status === "Accepted - Awaiting Restock") {
+    return "bg-red-100 text-red-700";
+  }
+  if (status === "Pending Acceptance" || status === "Accepted / Processing") {
+    return "bg-amber-100 text-amber-700";
+  }
+  return "bg-blue-100 text-blue-700";
+};
+
+function DepartmentRequestMinePage() {
   const location = useLocation();
   const navigate = useNavigate();
+  const { data: currentUser } = useAxios({ method: "get", url: "/Users/me" });
+
   const [keyword, setKeyword] = useState("");
   const [selectedStatus, setSelectedStatus] = useState(null);
   const [showStatusDropdown, setShowStatusDropdown] = useState(false);
@@ -43,17 +65,18 @@ function DepartmentRequestPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [actingId, setActingId] = useState(null);
 
   const statusDropdownRef = useRef(null);
 
-  const loadRequests = async () => {
+  const loadMine = async () => {
     setIsLoading(true);
     try {
-      const res = await departmentRequestApi.getAll();
+      const res = await departmentRequestApi.getMine();
       setRequests(Array.isArray(res.data) ? res.data : []);
       setError("");
     } catch (err) {
-      setError(getErrorMessage(err, "Failed to load department requests."));
+      setError(getErrorMessage(err, "Failed to load your requests."));
     } finally {
       setIsLoading(false);
     }
@@ -74,7 +97,7 @@ function DepartmentRequestPage() {
   }, []);
 
   useEffect(() => {
-    loadRequests();
+    loadMine();
   }, []);
 
   useEffect(() => {
@@ -88,8 +111,9 @@ function DepartmentRequestPage() {
     () =>
       requests.map((item) => ({
         id: item.requestNumber,
-        department: item.departmentName,
-        description: `${item.itemCount} item(s), requested ${item.quantityRequestedTotal}`,
+        department: item.departmentName || "-",
+        description: `${item.itemCount || 0} item(s), requested ${item.quantityRequestedTotal || 0}`,
+        requestedByUserId: item.requestedByUserId,
         requestedBy: item.requestedByUsername || "-",
         time: formatDateTime(item.requestedAt),
         status: item.status,
@@ -98,9 +122,7 @@ function DepartmentRequestPage() {
   );
 
   const statuses = useMemo(() => {
-    const fromData = Array.from(
-      new Set(requestsData.map((item) => item.status)),
-    );
+    const fromData = Array.from(new Set(requestsData.map((item) => item.status)));
     return fromData.length ? fromData : defaultStatuses;
   }, [requestsData]);
 
@@ -166,14 +188,58 @@ function DepartmentRequestPage() {
     });
   }, [keyword, selectedStatus, requestsData]);
 
-  const getStatusClassName = (status) => {
-    if (status === "Rejected" || status === "Accepted - Awaiting Restock") {
-      return "bg-red-100 text-red-700";
+  const handleResubmit = async (requestNumber) => {
+    setError("");
+    setMessage("");
+    setActingId(requestNumber);
+    try {
+      const res = await departmentRequestApi.getByRequestNumber(requestNumber);
+      const request = res.data || {};
+      const draftItems = (Array.isArray(request.items) ? request.items : []).map(
+        (item) => ({
+          id: `resubmit-${item.id || Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+          name: item.medicationName || item.description || "Medication",
+          specification: "",
+          quantityRequested: Math.max(1, Number(item.quantityRequested) || 1),
+        }),
+      );
+
+      localStorage.setItem(
+        DRAFT_KEY,
+        JSON.stringify({
+          items: draftItems,
+          departmentId: request.departmentId ? String(request.departmentId) : "",
+          notes: request.notes || "",
+        }),
+      );
+
+      navigate("/department-request/new", {
+        state: { message: "Rejected request loaded. Please review and submit again." },
+      });
+    } catch (err) {
+      setError(getErrorMessage(err, "Failed to prepare re-submit draft."));
+    } finally {
+      setActingId(null);
     }
-    if (status === "Pending Acceptance" || status === "Accepted / Processing") {
-      return "bg-amber-100 text-amber-700";
+  };
+
+  const handleDelete = async (requestNumber) => {
+    if (!window.confirm("Delete this rejected request? This cannot be undone.")) {
+      return;
     }
-    return "bg-blue-100 text-blue-700";
+
+    setError("");
+    setMessage("");
+    setActingId(requestNumber);
+    try {
+      await departmentRequestApi.delete(requestNumber);
+      setMessage("Rejected request deleted successfully.");
+      await loadMine();
+    } catch (err) {
+      setError(getErrorMessage(err, "Failed to delete request."));
+    } finally {
+      setActingId(null);
+    }
   };
 
   return (
@@ -181,8 +247,16 @@ function DepartmentRequestPage() {
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-1.5 text-xs text-gray-500">
           <PackageOpen size={14} />
-          <span>Department Request</span>
+          <span>Department Request / My Requests</span>
         </div>
+        <button
+          type="button"
+          onClick={() => navigate("/department-request/new")}
+          className="flex items-center gap-2 bg-green-600 text-white px-3 py-1.5 rounded-lg hover:bg-green-700 transition-colors"
+        >
+          <Plus size={14} />
+          <span className="text-xs">Add New Request</span>
+        </button>
       </div>
 
       {message && (
@@ -225,9 +299,7 @@ function DepartmentRequestPage() {
 
       <div className="bg-white border border-gray-200 rounded-lg">
         <div className="p-5 border-b border-gray-200">
-          <h2 className="text-sm text-gray-900 mb-3">
-            Department Request List
-          </h2>
+          <h2 className="text-sm text-gray-900 mb-3">My Request List</h2>
 
           <div className="flex items-center gap-3">
             <div className="flex-1 relative">
@@ -297,72 +369,88 @@ function DepartmentRequestPage() {
           <table className="w-full">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
-                <th className="px-5 py-2.5 text-left text-xs text-gray-600">
-                  Request ID
-                </th>
-                <th className="px-5 py-2.5 text-left text-xs text-gray-600">
-                  Department
-                </th>
-                <th className="px-5 py-2.5 text-left text-xs text-gray-600">
-                  Description
-                </th>
-                <th className="px-5 py-2.5 text-left text-xs text-gray-600">
-                  Requested By
-                </th>
-                <th className="px-5 py-2.5 text-left text-xs text-gray-600">
-                  Time
-                </th>
-                <th className="px-5 py-2.5 text-center text-xs text-gray-600 w-52">
-                  Status
-                </th>
+                <th className="px-5 py-2.5 text-left text-xs text-gray-600">Request ID</th>
+                <th className="px-5 py-2.5 text-left text-xs text-gray-600">Department</th>
+                <th className="px-5 py-2.5 text-left text-xs text-gray-600">Description</th>
+                <th className="px-5 py-2.5 text-left text-xs text-gray-600">Requested By</th>
+                <th className="px-5 py-2.5 text-left text-xs text-gray-600">Time</th>
+                <th className="px-5 py-2.5 text-center text-xs text-gray-600">Status</th>
+                <th className="px-5 py-2.5 text-left text-xs text-gray-600">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
               {isLoading ? (
                 <tr>
-                  <td colSpan={6} className="px-5 py-6 text-xs text-gray-500">
-                    Loading department requests...
+                  <td colSpan={7} className="px-5 py-6 text-xs text-gray-500">
+                    Loading your requests...
                   </td>
                 </tr>
               ) : !filteredData.length ? (
                 <tr>
-                  <td colSpan={6} className="px-5 py-6 text-xs text-gray-500">
-                    No requests found.
+                  <td colSpan={7} className="px-5 py-6 text-xs text-gray-500">
+                    No department requests found.
                   </td>
                 </tr>
               ) : (
-                filteredData.map((row) => (
-                  <tr
-                    key={row.id}
-                    className="hover:bg-gray-50 cursor-pointer"
-                    onClick={() => navigate(`/department-request/${row.id}`)}
-                  >
-                    <td className="px-5 py-3 text-xs text-gray-900">
-                      {row.id}
-                    </td>
-                    <td className="px-5 py-3 text-xs text-gray-900">
-                      {row.department}
-                    </td>
-                    <td className="px-5 py-3 text-xs text-gray-900">
-                      {row.description}
-                    </td>
-                    <td className="px-5 py-3 text-xs text-gray-900">
-                      {row.requestedBy}
-                    </td>
-                    <td className="px-5 py-3 text-xs text-gray-900">
-                      {row.time}
-                    </td>
-                    <td className="px-5 py-3 text-xs">
-                      <StatusBadge
-                        label={row.status}
-                        toneClass={getStatusClassName(row.status)}
-                        widthClass="w-40"
-                        paddingClass="px-3 py-1"
-                        className="min-h-7 rounded-md"
-                      />
-                    </td>
-                  </tr>
-                ))
+                filteredData.map((row) => {
+                  const isRejected = row.status === "Rejected";
+                  const isOwnRequest = row.requestedByUserId === currentUser?.id;
+                  const isActing = actingId === row.id;
+
+                  return (
+                    <tr key={row.id} className="hover:bg-gray-50">
+                      <td className="px-5 py-3 text-xs text-gray-900">{row.id}</td>
+                      <td className="px-5 py-3 text-xs text-gray-900">{row.department}</td>
+                      <td className="px-5 py-3 text-xs text-gray-900">{row.description}</td>
+                      <td className="px-5 py-3 text-xs text-gray-900">{row.requestedBy}</td>
+                      <td className="px-5 py-3 text-xs text-gray-900">{row.time}</td>
+                      <td className="px-5 py-3 text-center text-xs">
+                        <span
+                          className={`inline-flex items-center rounded-full px-2.5 py-1 ${getStatusClassName(
+                            row.status,
+                          )}`}
+                        >
+                          {row.status}
+                        </span>
+                      </td>
+                      <td className="px-5 py-3 text-xs">
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => navigate(`/department-request/${row.id}`)}
+                            className="inline-flex items-center gap-1 px-2 py-1 border border-gray-300 rounded hover:bg-gray-50"
+                          >
+                            <Eye size={12} />
+                            View
+                          </button>
+
+                          {isRejected && isOwnRequest && (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => handleResubmit(row.id)}
+                                disabled={isActing}
+                                className="inline-flex items-center gap-1 px-2 py-1 border border-blue-300 text-blue-700 rounded hover:bg-blue-50 disabled:opacity-50"
+                              >
+                                <RefreshCcw size={12} />
+                                Re-submit
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDelete(row.id)}
+                                disabled={isActing}
+                                className="inline-flex items-center gap-1 px-2 py-1 border border-red-300 text-red-700 rounded hover:bg-red-50 disabled:opacity-50"
+                              >
+                                <Trash2 size={12} />
+                                Delete
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
@@ -372,4 +460,4 @@ function DepartmentRequestPage() {
   );
 }
 
-export default DepartmentRequestPage;
+export default DepartmentRequestMinePage;

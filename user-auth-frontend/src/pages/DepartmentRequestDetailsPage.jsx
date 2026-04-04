@@ -55,7 +55,9 @@ function DepartmentRequestDetailsPage() {
   const { data: currentUser } = useAxios({ method: "get", url: "/Users/me" });
   const normalizedRole =
     currentUser?.role === "User" ? "DepartmentMember" : currentUser?.role;
-  const canReview = normalizedRole === "Admin" || normalizedRole === "WarehouseStaff";
+  const canReview =
+    normalizedRole === "Admin" || normalizedRole === "WarehouseStaff";
+  const backPath = canReview ? "/department-request" : "/department-request/mine";
 
   const loadRequest = async () => {
     if (!requestId) {
@@ -69,7 +71,9 @@ function DepartmentRequestDetailsPage() {
       setRequest(res.data || null);
       setError("");
     } catch (err) {
-      setError(getErrorMessage(err, "Failed to load department request details."));
+      setError(
+        getErrorMessage(err, "Failed to load department request details."),
+      );
       setRequest(null);
     } finally {
       setIsLoading(false);
@@ -98,7 +102,8 @@ function DepartmentRequestDetailsPage() {
     const isDispatched = status === "Dispatched";
     const isCompleted = status === "Completed";
 
-    const acceptedReached = isAccepted || isReady || isDispatched || isCompleted;
+    const acceptedReached =
+      isAccepted || isReady || isDispatched || isCompleted;
     const readyReached = isReady || isDispatched || isCompleted;
     const dispatchedReached = isDispatched || isCompleted;
 
@@ -157,7 +162,8 @@ function DepartmentRequestDetailsPage() {
   const requestItems = useMemo(() => {
     if (!Array.isArray(request?.items)) return [];
     return request.items.map((item) => {
-      const fallbackName = item.description?.split(" - ")?.[0] || item.description || "-";
+      const fallbackName =
+        item.description?.split(" - ")?.[0] || item.description || "-";
       return {
         id: item.id,
         name: item.medicationName || fallbackName,
@@ -196,7 +202,7 @@ function DepartmentRequestDetailsPage() {
     <div className="p-8">
       <div className="flex items-center gap-1.5 text-xs text-gray-500 mb-6">
         <button
-          onClick={() => navigate("/department-request")}
+          onClick={() => navigate(backPath)}
           className="text-gray-600 hover:text-gray-900 transition-colors"
         >
           <ArrowLeft size={16} />
@@ -267,7 +273,9 @@ function DepartmentRequestDetailsPage() {
 
                     <p
                       className={`mb-1 text-center text-xs ${
-                        step.state === "waiting" ? "text-gray-400" : "text-gray-900"
+                        step.state === "waiting"
+                          ? "text-gray-400"
+                          : "text-gray-900"
                       }`}
                     >
                       {step.title}
@@ -276,7 +284,9 @@ function DepartmentRequestDetailsPage() {
                     {step.subtitle && (
                       <div className="text-center">
                         <p className="text-xs text-gray-600">{step.subtitle}</p>
-                        {step.time && <p className="text-xs text-gray-500">{step.time}</p>}
+                        {step.time && (
+                          <p className="text-xs text-gray-500">{step.time}</p>
+                        )}
                       </div>
                     )}
 
@@ -316,7 +326,9 @@ function DepartmentRequestDetailsPage() {
                       </button>
                       <button
                         className="px-4 py-2 bg-blue-600 text-white rounded-lg text-xs hover:bg-blue-700 transition-colors disabled:opacity-50"
-                        onClick={() => handleUpdateStatus("Accepted / Processing")}
+                        onClick={() =>
+                          handleUpdateStatus("Accepted / Processing")
+                        }
                         disabled={isUpdating}
                       >
                         Accept Request
@@ -360,28 +372,36 @@ function DepartmentRequestDetailsPage() {
                   <Building2 size={12} />
                   Department
                 </div>
-                <div className="text-xs text-gray-900">{request.departmentName || "-"}</div>
+                <div className="text-xs text-gray-900">
+                  {request.departmentName || "-"}
+                </div>
               </div>
               <div>
                 <div className="text-xs text-gray-500 mb-1 flex items-center gap-1">
                   <User size={12} />
                   Requested By
                 </div>
-                <div className="text-xs text-gray-900">{request.requestedByUsername || "-"}</div>
+                <div className="text-xs text-gray-900">
+                  {request.requestedByUsername || "-"}
+                </div>
               </div>
               <div>
                 <div className="text-xs text-gray-500 mb-1 flex items-center gap-1">
                   <Calendar size={12} />
                   Request Date
                 </div>
-                <div className="text-xs text-gray-900">{formatDate(request.requestedAt)}</div>
+                <div className="text-xs text-gray-900">
+                  {formatDate(request.requestedAt)}
+                </div>
               </div>
               <div>
                 <div className="text-xs text-gray-500 mb-1 flex items-center gap-1">
                   <Clock size={12} />
                   Request Time
                 </div>
-                <div className="text-xs text-gray-900">{formatTime(request.requestedAt)}</div>
+                <div className="text-xs text-gray-900">
+                  {formatTime(request.requestedAt)}
+                </div>
               </div>
             </div>
 
@@ -427,7 +447,10 @@ function DepartmentRequestDetailsPage() {
                 <tbody className="divide-y divide-gray-200">
                   {!requestItems.length ? (
                     <tr>
-                      <td colSpan={7} className="px-5 py-6 text-xs text-gray-500">
+                      <td
+                        colSpan={7}
+                        className="px-5 py-6 text-xs text-gray-500"
+                      >
                         No items found.
                       </td>
                     </tr>

@@ -19,7 +19,8 @@ import logoImage from "../assets/159be5b2673509fff982b6d650d9a19a8a77d2d1.png";
 function Layout() {
   const navigate = useNavigate();
   const { data: user } = useAxios({ method: "get", url: "/Users/me" });
-  const normalizedRole = user?.role === "User" ? "DepartmentMember" : user?.role;
+  const normalizedRole =
+    user?.role === "User" ? "DepartmentMember" : user?.role;
   const isWarehouseUser =
     normalizedRole === "Admin" || normalizedRole === "WarehouseStaff";
 
@@ -59,10 +60,12 @@ function Layout() {
         <div className="mb-8">
           <div className="text-xs text-gray-500 mb-3 px-3">Main</div>
           <nav className="space-y-1">
-            <NavLink to="/dashboard" className={navClass}>
-              <LayoutDashboard size={16} />
-              <span className="text-xs">Dashboard</span>
-            </NavLink>
+            {isWarehouseUser && (
+              <NavLink to="/dashboard" className={navClass}>
+                <LayoutDashboard size={16} />
+                <span className="text-xs">Dashboard</span>
+              </NavLink>
+            )}
             <NavLink to="/inventory" className={navClass}>
               <Package size={16} />
               <span className="text-xs">Inventory</span>
@@ -77,7 +80,10 @@ function Layout() {
                     </div>
                     <ChevronDown size={14} />
                   </div>
-                  <NavLink to="/procurement/purchase-order" className={subNavClass}>
+                  <NavLink
+                    to="/procurement/purchase-order"
+                    className={subNavClass}
+                  >
                     Purchase Order
                   </NavLink>
                   <NavLink to="/procurement/invoice" className={subNavClass}>
@@ -91,10 +97,12 @@ function Layout() {
                 </NavLink>
               </>
             ) : (
-              <NavLink to="/department-request/new" className={navClass}>
-                <Boxes size={16} />
-                <span className="text-xs">Add New Request</span>
-              </NavLink>
+              <>
+                <NavLink to="/department-request/mine" className={navClass}>
+                  <Boxes size={16} />
+                  <span className="text-xs">My Requests</span>
+                </NavLink>
+              </>
             )}
           </nav>
         </div>

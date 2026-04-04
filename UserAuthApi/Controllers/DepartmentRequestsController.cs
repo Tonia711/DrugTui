@@ -57,7 +57,7 @@ namespace UserAuthApi.Controllers
         }
 
         [HttpPost]
-        [Authorize(Roles = "DepartmentMember")]
+        [Authorize(Roles = "DepartmentMember,User")]
         public IActionResult Create(CreateDepartmentRequestDto dto)
         {
             var requestNumber = dto.RequestNumber.Trim();
@@ -147,14 +147,82 @@ namespace UserAuthApi.Controllers
             });
         }
 
+        [HttpGet("mine")]
+        [Authorize(Roles = "DepartmentMember,User")]
+        public IActionResult GetMine([FromQuery] string? keyword)
+        {
+            var currentUserId = GetCurrentUserId();
+            if (!currentUserId.HasValue)
+            {
+                return Unauthorized("Invalid token.");
+            }
+
+            var currentUser = _context.Users.FirstOrDefault(u => u.Id == currentUserId.Value);
+            if (currentUser == null)
+            {
+                return Unauthorized("User not found.");
+            }
+
+            if (!currentUser.DepartmentId.HasValue)
+            {
+                return BadRequest("Department member must be assigned to a department.");
+            }
+
+            var query = _context.DepartmentRequests
+                .Where(dr => dr.DepartmentId == currentUser.DepartmentId.Value)
+                .AsQueryable();
+
+            if (!string.IsNullOrWhiteSpace(keyword))
+            {
+                keyword = keyword.Trim();
+                query = query.Where(dr =>
+                    dr.RequestNumber.Contains(keyword) ||
+                    dr.Status.Contains(keyword) ||
+                    dr.Department.Name.Contains(keyword));
+            }
+
+            var requests = query
+                .OrderByDescending(dr => dr.RequestedAt)
+                .Select(dr => new
+                {
+                    dr.Id,
+                    dr.RequestNumber,
+                    dr.Status,
+                    dr.DepartmentId,
+                    DepartmentName = dr.Department.Name,
+                    dr.RequestedByUserId,
+                    RequestedByUsername = dr.RequestedByUser != null ? dr.RequestedByUser.Username : null,
+                    dr.RequestedAt,
+                    dr.Notes,
+                    ItemCount = dr.Items.Count,
+                    QuantityRequestedTotal = dr.Items.Sum(i => i.QuantityRequested),
+                    QuantityApprovedTotal = dr.Items.Sum(i => i.QuantityApproved)
+                })
+                .ToList();
+
+            return Ok(requests);
+        }
+
         [HttpGet("{requestNumber}")]
-        [Authorize(Roles = "Admin,WarehouseStaff")]
+        [Authorize(Roles = "Admin,WarehouseStaff,DepartmentMember,User")]
         public IActionResult GetByRequestNumber(string requestNumber)
         {
             var normalizedRequestNumber = requestNumber.Trim();
             if (string.IsNullOrWhiteSpace(normalizedRequestNumber))
             {
                 return BadRequest("Request number is required.");
+            }
+
+            var currentUserId = GetCurrentUserId();
+            if (!currentUserId.HasValue)
+            {
+                return Unauthorized("Invalid token.");
+            }
+
+            var currentUser = _context.Users.FirstOrDefault(u => u.Id == currentUserId.Value);
+            if (currentUser == null)
+            {
+                return Unauthorized("User not found.");
             }
 
             var request = _context.DepartmentRequests
@@ -190,7 +258,54 @@ namespace UserAuthApi.Controllers
                 return NotFound("Department request not found.");
             }
 
+            if (IsDepartmentMemberRole())
+            {
+                if (!currentUser.DepartmentId.HasValue || request.DepartmentId != currentUser.DepartmentId.Value)
+                {
+                    return Forbid();
+                }
+            }
+
             return Ok(request);
+        }
+
+        [HttpDelete("{requestNumber}")]
+        [Authorize(Roles = "DepartmentMember,User")]
+        public IActionResult DeleteRejectedOwnRequest(string requestNumber)
+        {
+            var normalizedRequestNumber = requestNumber.Trim();
+            if (string.IsNullOrWhiteSpace(normalizedRequestNumber))
+            {
+                return BadRequest("Request number is required.");
+            }
+
+            var currentUserId = GetCurrentUserId();
+            if (!currentUserId.HasValue)
+            {
+                return Unauthorized("Invalid token.");
+            }
+
+            var request = _context.DepartmentRequests
+                .FirstOrDefault(dr => dr.RequestNumber == normalizedRequestNumber);
+
+            if (request == null)
+            {
+                return NotFound("Department request not found.");
+            }
+
+            if (request.RequestedByUserId != currentUserId.Value)
+            {
+                return Forbid();
+            }
+
+            if (!request.Status.Equals("Rejected", StringComparison.OrdinalIgnoreCase))
+            {
+                return BadRequest("Only rejected requests can be deleted by requester.");
+            }
+
+            _context.DepartmentRequests.Remove(request);
+            _context.SaveChanges();
+            return NoContent();
         }
 
         [HttpPut("{requestNumber}/status")]
@@ -275,6 +390,11 @@ namespace UserAuthApi.Controllers
             }
 
             return int.TryParse(userIdClaim.Value, out var userId) ? userId : null;
+        }
+
+        private bool IsDepartmentMemberRole()
+        {
+            return User.IsInRole("DepartmentMember") || User.IsInRole("User");
         }
     }
 }
