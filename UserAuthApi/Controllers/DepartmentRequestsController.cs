@@ -57,6 +57,7 @@ namespace UserAuthApi.Controllers
                     dr.Id,
                     dr.RequestNumber,
                     dr.Status,
+                    dr.DispatchedAt,
                     dr.RejectedByUsername,
                     dr.RejectedAt,
                     dr.DepartmentId,
@@ -216,6 +217,7 @@ namespace UserAuthApi.Controllers
                     dr.Id,
                     dr.RequestNumber,
                     dr.Status,
+                    dr.DispatchedAt,
                     dr.RejectedByUsername,
                     dr.RejectedAt,
                     dr.DepartmentId,
@@ -297,6 +299,7 @@ namespace UserAuthApi.Controllers
                 request.Id,
                 request.RequestNumber,
                 request.Status,
+                request.DispatchedAt,
                 request.RejectedByUsername,
                 request.RejectedAt,
                 request.DepartmentId,
@@ -487,6 +490,11 @@ namespace UserAuthApi.Controllers
                 {
                     item.QuantityApproved = 0;
                 }
+            }
+
+            if (nextStatus.Equals("Dispatched", StringComparison.OrdinalIgnoreCase))
+            {
+                request.DispatchedAt = DateTime.UtcNow;
             }
 
             _context.SaveChanges();

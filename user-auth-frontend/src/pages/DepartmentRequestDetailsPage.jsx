@@ -168,7 +168,7 @@ function DepartmentRequestDetailsPage() {
         id: 4,
         title: "Dispatched",
         subtitle: dispatchedReached ? "Dispatched" : null,
-        time: "",
+        time: dispatchedReached ? formatDateTime(request?.dispatchedAt) : "",
         state: getState(dispatchedReached, isReady),
       },
       {
@@ -503,7 +503,7 @@ function DepartmentRequestDetailsPage() {
               ) : null}
             </div>
 
-            <div className="grid grid-cols-4 gap-4">
+            <div className="grid grid-cols-6 gap-4">
               <div>
                 <div className="text-xs text-gray-500 mb-1 flex items-center gap-1">
                   <Building2 size={12} />
@@ -538,6 +538,24 @@ function DepartmentRequestDetailsPage() {
                 </div>
                 <div className="text-xs text-gray-900">
                   {formatTime(request.requestedAt)}
+                </div>
+              </div>
+              <div>
+                <div className="text-xs text-gray-500 mb-1 flex items-center gap-1">
+                  <Calendar size={12} />
+                  Dispatch Date
+                </div>
+                <div className="text-xs text-gray-900">
+                  {formatDate(request.dispatchedAt)}
+                </div>
+              </div>
+              <div>
+                <div className="text-xs text-gray-500 mb-1 flex items-center gap-1">
+                  <Clock size={12} />
+                  Dispatch Time
+                </div>
+                <div className="text-xs text-gray-900">
+                  {formatTime(request.dispatchedAt)}
                 </div>
               </div>
             </div>
