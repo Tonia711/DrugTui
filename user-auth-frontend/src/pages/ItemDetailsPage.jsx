@@ -12,27 +12,16 @@ const inferUnitOfMeasure = (drugName) => {
   return "mg";
 };
 
-const inferDosageForm = (quantity) => {
-  const value = (quantity || "").toLowerCase();
-  if (value.includes("tablet")) return "Tablet";
-  if (value.includes("capsule")) return "Capsule";
-  if (value.includes("syrup")) return "Syrup";
-  if (value.includes("vial") || value.includes("ampoule")) return "Injection";
-  if (value.includes("cream")) return "Cream";
-  return "Tablet";
-};
-
 const mapItemToForm = (data) => ({
   genericName: data?.genericName || "",
   brandName: data?.name || "",
   batchNumber: data?.batchNumber || "",
   barcode: "",
   medsafeNo: "",
-  dosageForm: inferDosageForm(
-    data?.quantity || `${data?.stockQuantity ?? 0} ${data?.unit || ""}`,
-  ),
-  unit: data?.unit || "box",
-  quantity: data?.quantity || `${data?.stockQuantity ?? 0} ${data?.unit || ""}`,
+  dosageForm: data?.dosageForm || "Tablet",
+  strength: data?.strength || "",
+  unit: data?.unit || inferUnitOfMeasure(data?.name),
+  quantity: String(data?.stockQuantity ?? 0),
   expiryDate: data?.expiryDate ? String(data.expiryDate).slice(0, 10) : "",
   storageCondition: data?.storage || "Ambient",
   hazard: "No special handling",
@@ -60,6 +49,7 @@ function ItemDetailsPage() {
     barcode: "",
     medsafeNo: "",
     dosageForm: "Tablet",
+    strength: "",
     unit: "box",
     quantity: "",
     expiryDate: "",
@@ -174,6 +164,8 @@ function ItemDetailsPage() {
         genericName: genericName || brandName,
         batchNumber,
         unit: form.unit || "box",
+        dosageForm: form.dosageForm || "Tablet",
+        strength: form.strength?.trim() || null,
         reorderLevel,
         expiryDate,
         supplier: supplier || null,
@@ -398,6 +390,23 @@ function ItemDetailsPage() {
                   </svg>
                 </div>
               </div>
+            </div>
+            <div>
+              <label className="block text-xs text-gray-700 mb-2">
+                Strength per Unit
+              </label>
+              <input
+                type="text"
+                value={form.strength}
+                disabled={!isEditing}
+                onChange={(e) =>
+                  setForm((prev) => ({ ...prev, strength: e.target.value }))
+                }
+                placeholder="e.g., 5mg"
+                className={`w-full px-3 py-2 border border-gray-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-gray-200 ${
+                  isEditing ? "bg-gray-50" : "bg-white"
+                }`}
+              />
             </div>
             <div>
               <label className="block text-xs text-gray-700 mb-2">

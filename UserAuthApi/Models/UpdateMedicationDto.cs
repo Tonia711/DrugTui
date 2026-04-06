@@ -19,6 +19,13 @@ namespace UserAuthApi.Models
         [StringLength(40)]
         public string Unit { get; set; } = "box";
 
+        [Required]
+        [StringLength(40)]
+        public string DosageForm { get; set; } = "Tablet";
+
+        [StringLength(40)]
+        public string? Strength { get; set; }
+
         [Range(0, int.MaxValue)]
         public int ReorderLevel { get; set; } = 10;
 

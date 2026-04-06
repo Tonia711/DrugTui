@@ -48,6 +48,7 @@ const getErrorMessage = (error, fallback) => {
 
 function DepartmentRequestDetailsPage() {
   const [comment, setComment] = useState("");
+  const [approvedQtyByItemId, setApprovedQtyByItemId] = useState({});
   const [request, setRequest] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
@@ -77,7 +78,26 @@ function DepartmentRequestDetailsPage() {
     setIsLoading(true);
     try {
       const res = await departmentRequestApi.getByRequestNumber(requestId);
-      setRequest(res.data || null);
+      const nextRequest = res.data || null;
+      setRequest(nextRequest);
+      if (nextRequest && Array.isArray(nextRequest.items)) {
+        const nextApprovedMap = {};
+        nextRequest.items.forEach((item) => {
+          const requestedQty = Math.max(0, Number(item.quantityRequested) || 0);
+          const approvedQty =
+            item.quantityApproved !== undefined && item.quantityApproved !== null
+              ? Number(item.quantityApproved)
+              : requestedQty;
+
+          nextApprovedMap[item.id] =
+            nextRequest.status === "Pending Acceptance"
+              ? requestedQty
+              : approvedQty;
+        });
+        setApprovedQtyByItemId(nextApprovedMap);
+      } else {
+        setApprovedQtyByItemId({});
+      }
       setError("");
     } catch (err) {
       setError(
@@ -176,12 +196,16 @@ function DepartmentRequestDetailsPage() {
       return {
         id: item.id,
         name: item.medicationName || fallbackName,
-        specification: "-",
+        specification: item.strength
+          ? `${item.strength}/${item.dosageForm || "-"}`
+          : `${item.unit || "-"} - ${item.dosageForm || "-"}`,
         requestedQty: item.quantityRequested,
         approvedQty: item.quantityApproved,
-        availableStock: "-",
-        batchNumber: "-",
-        expiryDate: "-",
+        availableStock: item.stockQuantity !== undefined && item.stockQuantity !== null ? item.stockQuantity : "-",
+        batchNumber: item.batchNumber || "-",
+        expiryDate: item.expiryDate 
+          ? new Date(item.expiryDate).toLocaleDateString() 
+          : "-",
       };
     });
   }, [request]);
@@ -260,10 +284,27 @@ function DepartmentRequestDetailsPage() {
     setMessage("");
 
     try {
-      await departmentRequestApi.updateStatus(request.requestNumber, {
+      const payload = {
         status: nextStatus,
         notes: comment.trim() || null,
-      });
+      };
+
+      if (nextStatus === "Accepted / Processing" && Array.isArray(request?.items)) {
+        payload.approvedItems = request.items.map((item) => {
+          const requestedQty = Math.max(0, Number(item.quantityRequested) || 0);
+          const rawApprovedQty = Number(approvedQtyByItemId[item.id]);
+          const normalizedApprovedQty = Number.isFinite(rawApprovedQty)
+            ? Math.min(requestedQty, Math.max(0, rawApprovedQty))
+            : requestedQty;
+
+          return {
+            itemId: item.id,
+            quantityApproved: normalizedApprovedQty,
+          };
+        });
+      }
+
+      await departmentRequestApi.updateStatus(request.requestNumber, payload);
       setMessage(`Request status updated to ${nextStatus}.`);
       await loadRequest();
     } catch (err) {
@@ -524,6 +565,28 @@ function DepartmentRequestDetailsPage() {
                 {request.notes}
               </div>
             )}
+
+            {(request.status === "Pending Acceptance" ||
+              request.status === "Accepted / Processing") && (
+              <div className="bg-white border border-gray-200 rounded-lg p-6 mt-6">
+                <h3 className="text-sm text-gray-900 mb-4">
+                  {request.status === "Pending Acceptance"
+                    ? "Add Comment (Optional)"
+                    : "Notes"}
+                </h3>
+                <textarea
+                  value={comment}
+                  onChange={(e) => setComment(e.target.value)}
+                  placeholder={
+                    request.status === "Pending Acceptance"
+                      ? "Enter acceptance or rejection comments..."
+                      : "Add any notes..."
+                  }
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                  rows={4}
+                />
+              </div>
+            )}
           </div>
 
           <div className="bg-white border border-gray-200 rounded-lg overflow-hidden mb-6">
@@ -538,7 +601,7 @@ function DepartmentRequestDetailsPage() {
                       Medicine Name
                     </th>
                     <th className="px-5 py-2.5 text-left text-xs text-gray-600">
-                      Specification
+                       Unit & Dosage Form
                     </th>
                     <th className="px-5 py-2.5 text-left text-xs text-gray-600">
                       Requested Qty
@@ -583,7 +646,34 @@ function DepartmentRequestDetailsPage() {
                           {item.availableStock}
                         </td>
                         <td className="px-5 py-3 text-xs text-green-600 align-middle">
-                          {item.approvedQty}
+                          {canReview && request.status === "Pending Acceptance" ? (
+                            <input
+                              type="number"
+                              min="0"
+                              max={item.requestedQty}
+                              value={
+                                approvedQtyByItemId[item.id] !== undefined
+                                  ? approvedQtyByItemId[item.id]
+                                  : item.requestedQty
+                              }
+                              onChange={(event) => {
+                                const rawValue = Number(event.target.value);
+                                const maxValue = Math.max(0, Number(item.requestedQty) || 0);
+                                const normalizedValue = Number.isFinite(rawValue)
+                                  ? Math.min(maxValue, Math.max(0, rawValue))
+                                  : 0;
+
+                                setApprovedQtyByItemId((prev) => ({
+                                  ...prev,
+                                  [item.id]: normalizedValue,
+                                }));
+                              }}
+                              className="w-20 px-2 py-1 border border-gray-300 rounded text-xs text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              disabled={isUpdating}
+                            />
+                          ) : (
+                            item.approvedQty
+                          )}
                         </td>
                         <td className="px-5 py-3 text-xs text-gray-900 align-middle">
                           {item.batchNumber}
@@ -599,26 +689,7 @@ function DepartmentRequestDetailsPage() {
             </div>
           </div>
 
-          {request.status !== "Completed" && (
-            <div className="bg-white border border-gray-200 rounded-lg p-6">
-              <h3 className="text-sm text-gray-900 mb-4">
-                {request.status === "Pending Acceptance"
-                  ? "Add Comment (Optional)"
-                  : "Notes"}
-              </h3>
-              <textarea
-                value={comment}
-                onChange={(e) => setComment(e.target.value)}
-                placeholder={
-                  request.status === "Pending Acceptance"
-                    ? "Enter acceptance or rejection comments..."
-                    : "Add any notes..."
-                }
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
-                rows={4}
-              />
-            </div>
-          )}
+
         </>
       )}
     </div>

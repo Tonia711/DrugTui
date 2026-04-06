@@ -7,6 +7,7 @@ using Microsoft.OpenApi.Models;
 using Microsoft.AspNetCore.Identity;
 using UserAuthApi.Models;
 using System.Globalization;
+using System.Text.RegularExpressions;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -131,6 +132,54 @@ using (var scope = app.Services.CreateScope())
         }
 
         return fallback;
+    }
+
+    static string ParseUnitOfMeasure(string text)
+    {
+        var value = text?.ToLowerInvariant() ?? string.Empty;
+        if (value.Contains("mcg")) return "mcg";
+        if (value.Contains("mg")) return "mg";
+        if (value.Contains("ml")) return "ml";
+        if (value.Contains("iu")) return "IU";
+        return "mg";
+    }
+
+    static string? ParseStrength(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return null;
+        }
+
+        var match = Regex.Match(text, @"(\d+(?:\.\d+)?)\s*(mcg|mg|g|ml|iu)", RegexOptions.IgnoreCase);
+        if (!match.Success)
+        {
+            return null;
+        }
+
+        var amount = match.Groups[1].Value;
+        var unitRaw = match.Groups[2].Value;
+        var unit = unitRaw.Equals("iu", StringComparison.OrdinalIgnoreCase) ? "IU" : unitRaw.ToLowerInvariant();
+        return $"{amount}{unit}";
+    }
+
+    static string NormalizeDosageForm(string? text)
+    {
+        var value = (text ?? string.Empty).Trim().ToLowerInvariant();
+        return value switch
+        {
+            "tablets" => "Tablet",
+            "tablet" => "Tablet",
+            "capsules" => "Capsule",
+            "capsule" => "Capsule",
+            "vials" => "Vial",
+            "vial" => "Vial",
+            "ampoules" => "Ampoule",
+            "ampoule" => "Ampoule",
+            "syrup" => "Syrup",
+            "cream" => "Cream",
+            _ => string.IsNullOrWhiteSpace(text) ? "Tablet" : text.Trim()
+        };
     }
 
     if (!db.StorageZones.Any())
@@ -262,6 +311,9 @@ using (var scope = app.Services.CreateScope())
     foreach (var seed in medicationSeeds)
     {
         var stockQuantity = ParseLeadingInt(seed.Item5);
+        var dosageForm = NormalizeDosageForm(seed.Item4);
+        var unitOfMeasure = ParseUnitOfMeasure(seed.Item1);
+        var strength = ParseStrength(seed.Item1);
         var expiryDate = seed.Item6 == null
             ? (DateTime?)null
             : ParseUtc(seed.Item6, DateTime.UtcNow.AddYears(1));
@@ -270,7 +322,9 @@ using (var scope = app.Services.CreateScope())
         {
             existingMedication.Name = seed.Item1;
             existingMedication.GenericName = seed.Item2;
-            existingMedication.Unit = seed.Item4;
+            existingMedication.Unit = unitOfMeasure;
+            existingMedication.DosageForm = dosageForm;
+            existingMedication.Strength = strength;
             existingMedication.StockQuantity = stockQuantity;
             existingMedication.ReorderLevel = 100;
             existingMedication.ExpiryDate = expiryDate;
@@ -285,7 +339,9 @@ using (var scope = app.Services.CreateScope())
                 Name = seed.Item1,
                 GenericName = seed.Item2,
                 BatchNumber = seed.Item3,
-                Unit = seed.Item4,
+                Unit = unitOfMeasure,
+                DosageForm = dosageForm,
+                Strength = strength,
                 StockQuantity = stockQuantity,
                 ReorderLevel = 100,
                 ExpiryDate = expiryDate,
