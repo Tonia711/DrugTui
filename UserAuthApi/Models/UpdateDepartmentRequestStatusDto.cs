@@ -2,6 +2,15 @@ using System.ComponentModel.DataAnnotations;
 
 namespace UserAuthApi.Models
 {
+    public class UpdateDepartmentRequestApprovedItemDto
+    {
+        [Range(1, int.MaxValue)]
+        public int ItemId { get; set; }
+
+        [Range(0, int.MaxValue)]
+        public int QuantityApproved { get; set; }
+    }
+
     public class UpdateDepartmentRequestStatusDto
     {
         [Required]
@@ -10,5 +19,7 @@ namespace UserAuthApi.Models
 
         [StringLength(500)]
         public string? Notes { get; set; }
+
+        public List<UpdateDepartmentRequestApprovedItemDto>? ApprovedItems { get; set; }
     }
 }

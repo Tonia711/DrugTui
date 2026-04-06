@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
+using System.Text.RegularExpressions;
 using UserAuthApi.Data;
 using UserAuthApi.Models;
 
@@ -12,6 +13,21 @@ namespace UserAuthApi.Controllers
     [Authorize]
     public class DepartmentRequestsController : ControllerBase
     {
+        private sealed class MedicationLookup
+        {
+            public int Id { get; init; }
+            public string Name { get; init; } = string.Empty;
+            public string? GenericName { get; init; }
+            public string? Strength { get; init; }
+            public string? Unit { get; init; }
+            public string? DosageForm { get; init; }
+            public string? BatchNumber { get; init; }
+            public DateTime? ExpiryDate { get; init; }
+            public int StockQuantity { get; init; }
+            public string? Storage { get; init; }
+            public string? Location { get; init; }
+        }
+
         private readonly AppDbContext _context;
 
         public DepartmentRequestsController(AppDbContext context)
@@ -114,6 +130,16 @@ namespace UserAuthApi.Controllers
                 return BadRequest($"Medication {missingMedicationId} does not exist.");
             }
 
+            var medicationCatalog = _context.Medications
+                .Select(m => new MedicationLookup
+                {
+                    Id = m.Id,
+                    Name = m.Name,
+                    GenericName = m.GenericName,
+                    Strength = m.Strength
+                })
+                .ToList();
+
             var request = new DepartmentRequest
             {
                 RequestNumber = requestNumber,
@@ -124,7 +150,7 @@ namespace UserAuthApi.Controllers
                 Notes = string.IsNullOrWhiteSpace(dto.Notes) ? null : dto.Notes.Trim(),
                 Items = dto.Items.Select(i => new DepartmentRequestItem
                 {
-                    MedicationId = i.MedicationId,
+                    MedicationId = i.MedicationId ?? FindBestMedicationIdByDescription(i.Description, medicationCatalog),
                     Description = i.Description.Trim(),
                     QuantityRequested = i.QuantityRequested,
                     QuantityApproved = i.QuantityApproved
@@ -230,34 +256,11 @@ namespace UserAuthApi.Controllers
             }
 
             var request = _context.DepartmentRequests
-                .Where(dr => dr.RequestNumber == normalizedRequestNumber)
-                .Select(dr => new
-                {
-                    dr.Id,
-                    dr.RequestNumber,
-                    dr.Status,
-                    dr.RejectedByUsername,
-                    dr.RejectedAt,
-                    dr.DepartmentId,
-                    DepartmentName = dr.Department.Name,
-                    dr.RequestedByUserId,
-                    RequestedByUsername = dr.RequestedByUser != null ? dr.RequestedByUser.Username : null,
-                    dr.RequestedAt,
-                    dr.Notes,
-                    Items = dr.Items
-                        .OrderBy(i => i.Id)
-                        .Select(i => new
-                        {
-                            i.Id,
-                            i.MedicationId,
-                            MedicationName = i.Medication != null ? i.Medication.Name : null,
-                            i.Description,
-                            i.QuantityRequested,
-                            i.QuantityApproved
-                        })
-                        .ToList()
-                })
-                .FirstOrDefault();
+                .Include(dr => dr.Department)
+                .Include(dr => dr.RequestedByUser)
+                .Include(dr => dr.Items)
+                    .ThenInclude(i => i.Medication)
+                .FirstOrDefault(dr => dr.RequestNumber == normalizedRequestNumber);
 
             if (request == null)
             {
@@ -272,7 +275,80 @@ namespace UserAuthApi.Controllers
                 }
             }
 
-            return Ok(request);
+            var medicationCatalog = _context.Medications
+                .Select(m => new MedicationLookup
+                {
+                    Id = m.Id,
+                    Name = m.Name,
+                    GenericName = m.GenericName,
+                    Strength = m.Strength,
+                    Unit = m.Unit,
+                    DosageForm = m.DosageForm,
+                    BatchNumber = m.BatchNumber,
+                    ExpiryDate = m.ExpiryDate,
+                    StockQuantity = m.StockQuantity,
+                    Storage = m.Storage,
+                    Location = m.Location
+                })
+                .ToList();
+
+            var response = new
+            {
+                request.Id,
+                request.RequestNumber,
+                request.Status,
+                request.RejectedByUsername,
+                request.RejectedAt,
+                request.DepartmentId,
+                DepartmentName = request.Department.Name,
+                request.RequestedByUserId,
+                RequestedByUsername = request.RequestedByUser != null ? request.RequestedByUser.Username : null,
+                request.RequestedAt,
+                request.Notes,
+                Items = request.Items
+                    .OrderBy(i => i.Id)
+                    .Select(i =>
+                    {
+                        var matchedMedication = i.Medication != null
+                            ? new MedicationLookup
+                            {
+                                Id = i.Medication.Id,
+                                Name = i.Medication.Name,
+                                GenericName = i.Medication.GenericName,
+                                Strength = i.Medication.Strength,
+                                Unit = i.Medication.Unit,
+                                DosageForm = i.Medication.DosageForm,
+                                BatchNumber = i.Medication.BatchNumber,
+                                ExpiryDate = i.Medication.ExpiryDate,
+                                StockQuantity = i.Medication.StockQuantity,
+                                Storage = i.Medication.Storage,
+                                Location = i.Medication.Location
+                            }
+                            : FindBestMedicationByDescription(i.Description, medicationCatalog);
+
+                        return new
+                        {
+                            i.Id,
+                            MedicationId = i.MedicationId ?? matchedMedication?.Id,
+                            MedicationName = matchedMedication != null ? matchedMedication.Name : null,
+                            GenericName = matchedMedication != null ? matchedMedication.GenericName : null,
+                            Strength = matchedMedication != null ? matchedMedication.Strength : null,
+                            Unit = matchedMedication != null ? matchedMedication.Unit : null,
+                            DosageForm = matchedMedication != null ? matchedMedication.DosageForm : null,
+                            i.Description,
+                            i.QuantityRequested,
+                            i.QuantityApproved,
+                            BatchNumber = matchedMedication != null ? matchedMedication.BatchNumber : null,
+                            ExpiryDate = matchedMedication != null ? matchedMedication.ExpiryDate : null,
+                            StockQuantity = matchedMedication != null ? matchedMedication.StockQuantity : 0,
+                            Storage = matchedMedication != null ? matchedMedication.Storage : null,
+                            Location = matchedMedication != null ? matchedMedication.Location : null
+                        };
+                    })
+                    .ToList()
+            };
+
+            return Ok(response);
         }
 
         [HttpDelete("{requestNumber}")]
@@ -374,9 +450,32 @@ namespace UserAuthApi.Controllers
 
             if (nextStatus.Equals("Accepted / Processing", StringComparison.OrdinalIgnoreCase))
             {
+                var approvedByItemId = (dto.ApprovedItems ?? new List<UpdateDepartmentRequestApprovedItemDto>())
+                    .GroupBy(i => i.ItemId)
+                    .ToDictionary(g => g.Key, g => g.Last().QuantityApproved);
+
+                var invalidItemId = approvedByItemId.Keys
+                    .FirstOrDefault(id => request.Items.All(item => item.Id != id));
+                if (invalidItemId != 0)
+                {
+                    return BadRequest($"Item {invalidItemId} does not belong to this request.");
+                }
+
                 foreach (var item in request.Items)
                 {
-                    item.QuantityApproved = item.QuantityRequested;
+                    if (approvedByItemId.TryGetValue(item.Id, out var approvedQty))
+                    {
+                        if (approvedQty < 0 || approvedQty > item.QuantityRequested)
+                        {
+                            return BadRequest($"Approved quantity for item {item.Id} must be between 0 and requested quantity ({item.QuantityRequested}).");
+                        }
+
+                        item.QuantityApproved = approvedQty;
+                    }
+                    else
+                    {
+                        item.QuantityApproved = item.QuantityRequested;
+                    }
                 }
             }
 
@@ -415,6 +514,55 @@ namespace UserAuthApi.Controllers
         private bool IsDepartmentMemberRole()
         {
             return User.IsInRole("DepartmentMember") || User.IsInRole("User");
+        }
+
+        private static int? FindBestMedicationIdByDescription(
+            string description,
+            List<MedicationLookup> medications)
+        {
+            var matched = FindBestMedicationByDescription(description, medications);
+            return matched?.Id;
+        }
+
+        private static MedicationLookup? FindBestMedicationByDescription(
+            string description,
+            List<MedicationLookup> medications)
+        {
+            if (string.IsNullOrWhiteSpace(description) || medications.Count == 0)
+            {
+                return null;
+            }
+
+            var normalizedDescription = NormalizeForMatch(description);
+
+            var candidates = medications
+                .Select(m => new
+                {
+                    Medication = m,
+                    Name = NormalizeForMatch(m.Name),
+                    GenericName = NormalizeForMatch(m.GenericName)
+                })
+                .Where(x =>
+                    (!string.IsNullOrWhiteSpace(x.Name) && normalizedDescription.Contains(x.Name, StringComparison.Ordinal)) ||
+                    (!string.IsNullOrWhiteSpace(x.GenericName) && normalizedDescription.Contains(x.GenericName, StringComparison.Ordinal)))
+                .OrderByDescending(x => Math.Max(x.Name.Length, x.GenericName.Length))
+                .ThenByDescending(x => !string.IsNullOrWhiteSpace(x.Medication.Strength))
+                .ThenByDescending(x => x.Medication.Id)
+                .Select(x => x.Medication)
+                .ToList();
+
+            return candidates.FirstOrDefault();
+        }
+
+        private static string NormalizeForMatch(string? value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return string.Empty;
+            }
+
+            var lowered = value.Trim().ToLowerInvariant();
+            return Regex.Replace(lowered, "[^a-z0-9]+", string.Empty);
         }
     }
 }

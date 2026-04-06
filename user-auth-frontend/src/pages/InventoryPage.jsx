@@ -65,9 +65,7 @@ function InventoryPage() {
             drugName: item.name || "-",
             genericName: item.genericName || item.name || "-",
             batchNumber: item.batchNumber || "-",
-            quantity:
-              item.quantity ||
-              `${item.stockQuantity ?? 0} ${item.unit || ""}`.trim(),
+            quantity: item.stockQuantity ?? 0,
             expiryDate: item.expiryDate
               ? new Date(item.expiryDate).toISOString().slice(0, 10)
               : "-",
@@ -131,9 +129,7 @@ function InventoryPage() {
         drugName: item.name || "-",
         genericName: item.genericName || item.name || "-",
         batchNumber: item.batchNumber || "-",
-        quantity:
-          item.quantity ||
-          `${item.stockQuantity ?? 0} ${item.unit || ""}`.trim(),
+        quantity: item.stockQuantity ?? 0,
         expiryDate: item.expiryDate
           ? new Date(item.expiryDate).toISOString().slice(0, 10)
           : "-",

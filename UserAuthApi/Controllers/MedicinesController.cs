@@ -64,6 +64,8 @@ namespace UserAuthApi.Controllers
                     m.GenericName,
                     m.BatchNumber,
                     m.Unit,
+                    m.DosageForm,
+                    m.Strength,
                     m.StockQuantity,
                     m.ReorderLevel,
                     m.ExpiryDate,
@@ -85,6 +87,8 @@ namespace UserAuthApi.Controllers
                         GenericName = string.IsNullOrWhiteSpace(m.GenericName) ? m.Name : m.GenericName,
                         m.BatchNumber,
                         m.Unit,
+                        m.DosageForm,
+                        m.Strength,
                         m.StockQuantity,
                         m.ReorderLevel,
                         m.ExpiryDate,
@@ -130,6 +134,8 @@ namespace UserAuthApi.Controllers
                 GenericName = string.IsNullOrWhiteSpace(medicine.GenericName) ? medicine.Name : medicine.GenericName,
                 medicine.BatchNumber,
                 medicine.Unit,
+                medicine.DosageForm,
+                medicine.Strength,
                 medicine.StockQuantity,
                 medicine.ReorderLevel,
                 medicine.ExpiryDate,
@@ -194,6 +200,8 @@ namespace UserAuthApi.Controllers
                 GenericName = string.IsNullOrWhiteSpace(dto.GenericName) ? dto.Name : dto.GenericName,
                 BatchNumber = dto.BatchNumber,
                 Unit = dto.Unit,
+                DosageForm = string.IsNullOrWhiteSpace(dto.DosageForm) ? "Tablet" : dto.DosageForm,
+                Strength = string.IsNullOrWhiteSpace(dto.Strength) ? null : dto.Strength.Trim(),
                 StockQuantity = dto.InitialStock,
                 ReorderLevel = dto.ReorderLevel,
                 ExpiryDate = dto.ExpiryDate,
@@ -229,6 +237,8 @@ namespace UserAuthApi.Controllers
                 GenericName = medicine.GenericName ?? medicine.Name,
                 medicine.BatchNumber,
                 medicine.Unit,
+                medicine.DosageForm,
+                medicine.Strength,
                 medicine.StockQuantity,
                 medicine.ReorderLevel,
                 medicine.ExpiryDate,
@@ -270,6 +280,8 @@ namespace UserAuthApi.Controllers
             medicine.GenericName = string.IsNullOrWhiteSpace(dto.GenericName) ? dto.Name : dto.GenericName;
             medicine.BatchNumber = dto.BatchNumber;
             medicine.Unit = dto.Unit;
+            medicine.DosageForm = string.IsNullOrWhiteSpace(dto.DosageForm) ? "Tablet" : dto.DosageForm;
+            medicine.Strength = string.IsNullOrWhiteSpace(dto.Strength) ? null : dto.Strength.Trim();
             medicine.ReorderLevel = dto.ReorderLevel;
             medicine.ExpiryDate = dto.ExpiryDate;
             medicine.Supplier = dto.Supplier;
@@ -286,6 +298,8 @@ namespace UserAuthApi.Controllers
                 GenericName = medicine.GenericName ?? medicine.Name,
                 medicine.BatchNumber,
                 medicine.Unit,
+                medicine.DosageForm,
+                medicine.Strength,
                 medicine.StockQuantity,
                 medicine.ReorderLevel,
                 medicine.ExpiryDate,

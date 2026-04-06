@@ -9,68 +9,9 @@ import {
   Send,
   Trash2,
 } from "lucide-react";
-import api, { departmentApi, departmentRequestApi } from "../util/api";
+import api, { departmentApi, departmentRequestApi, inventoryApi } from "../util/api";
 
 const DRAFT_KEY = "departmentRequestDraft";
-
-const previousOrders = [
-  {
-    id: "prev-1",
-    name: "Amoxicillin 500mg",
-    specification: "100 tablets/bottle",
-    lastOrderQty: 500,
-    frequency: "High",
-  },
-  {
-    id: "prev-2",
-    name: "Ibuprofen 400mg",
-    specification: "100 tablets/bottle",
-    lastOrderQty: 300,
-    frequency: "High",
-  },
-  {
-    id: "prev-3",
-    name: "Paracetamol 500mg",
-    specification: "100 tablets/bottle",
-    lastOrderQty: 800,
-    frequency: "High",
-  },
-  {
-    id: "prev-4",
-    name: "Omeprazole 20mg",
-    specification: "30 capsules/box",
-    lastOrderQty: 200,
-    frequency: "Medium",
-  },
-  {
-    id: "prev-5",
-    name: "Metformin 500mg",
-    specification: "100 tablets/bottle",
-    lastOrderQty: 400,
-    frequency: "Medium",
-  },
-  {
-    id: "prev-6",
-    name: "Lisinopril 10mg",
-    specification: "100 tablets/bottle",
-    lastOrderQty: 250,
-    frequency: "Medium",
-  },
-  {
-    id: "prev-7",
-    name: "Atorvastatin 20mg",
-    specification: "30 tablets/box",
-    lastOrderQty: 150,
-    frequency: "Low",
-  },
-  {
-    id: "prev-8",
-    name: "Amlodipine 5mg",
-    specification: "100 tablets/bottle",
-    lastOrderQty: 180,
-    frequency: "Low",
-  },
-];
 
 const getErrorMessage = (error, fallback) => {
   const data = error?.response?.data;
@@ -99,6 +40,8 @@ function DepartmentRequestCreatePage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [medications, setMedications] = useState([]);
+  const [isLoadingMedications, setIsLoadingMedications] = useState(false);
 
   useEffect(() => {
     const loadDepartments = async () => {
@@ -140,6 +83,33 @@ function DepartmentRequestCreatePage() {
   }, []);
 
   useEffect(() => {
+    const loadMedications = async () => {
+      setIsLoadingMedications(true);
+      try {
+        const res = await inventoryApi.getAll();
+        const list = Array.isArray(res.data) ? res.data : [];
+        setMedications(
+          list.map((item) => ({
+            id: item.id,
+            name: item.name || "-",
+            genericName: item.genericName || item.name || "-",
+            strength: item.strength || "",
+            unit: item.unit || "-",
+            dosageForm: item.dosageForm || "-",
+            stockQuantity: item.stockQuantity ?? 0,
+          })),
+        );
+      } catch {
+        setMedications([]);
+      } finally {
+        setIsLoadingMedications(false);
+      }
+    };
+
+    loadMedications();
+  }, []);
+
+  useEffect(() => {
     const raw = localStorage.getItem(DRAFT_KEY);
     if (!raw) return;
 
@@ -155,9 +125,14 @@ function DepartmentRequestCreatePage() {
     }
   }, []);
 
-  const filteredPreviousOrders = previousOrders.filter((item) =>
-    item.name.toLowerCase().includes(manualItemName.toLowerCase()),
-  );
+  const filteredMedications = medications.filter((item) => {
+    const keyword = manualItemName.trim().toLowerCase();
+    if (!keyword) return true;
+    return (
+      item.name.toLowerCase().includes(keyword) ||
+      item.genericName.toLowerCase().includes(keyword)
+    );
+  });
 
   const isSubmitDisabled =
     isSubmitting ||
@@ -165,12 +140,15 @@ function DepartmentRequestCreatePage() {
     !departmentId ||
     requestList.length === 0;
 
-  const handleAddPreviousItem = (item) => {
+  const handleAddMedicationItem = (item) => {
     const newItem = {
-      id: `prev-${Date.now()}`,
+      id: `med-${item.id}-${Date.now()}`,
+      medicationId: item.id,
       name: item.name,
-      specification: item.specification,
-      quantityRequested: item.lastOrderQty,
+      specification: item.strength
+        ? `${item.strength}/${item.dosageForm || "-"}`
+        : `${item.unit || "-"} - ${item.dosageForm || "-"}`,
+      quantityRequested: 1,
     };
     setRequestList((prev) => [...prev, newItem]);
     setManualItemName("");
@@ -186,6 +164,7 @@ function DepartmentRequestCreatePage() {
 
     const newItem = {
       id: `manual-${Date.now()}`,
+      medicationId: null,
       name: manualItemName.trim(),
       specification: "",
       quantityRequested: Math.max(1, Number.parseInt(manualQuantity, 10) || 1),
@@ -233,7 +212,10 @@ function DepartmentRequestCreatePage() {
 
     const normalizedItems = requestList
       .map((item) => ({
-        medicationId: null,
+        medicationId:
+          item.medicationId !== undefined && item.medicationId !== null
+            ? Number(item.medicationId)
+            : null,
         description:
           `${item.name}${item.specification ? ` ${item.specification}` : ""}`.trim(),
         quantityRequested: Math.max(1, Number(item.quantityRequested) || 1),
@@ -335,41 +317,37 @@ function DepartmentRequestCreatePage() {
           </div>
 
           <div className="bg-white border border-gray-200 rounded-lg p-4 mt-4">
-            <h3 className="text-sm text-gray-900 mb-3">Previous Orders</h3>
+            <h3 className="text-sm text-gray-900 mb-3">Medication Catalog</h3>
             <div className="space-y-2 max-h-[400px] overflow-y-auto">
-              {filteredPreviousOrders.map((item) => (
+              {isLoadingMedications ? (
+                <div className="text-xs text-gray-500">Loading medications...</div>
+              ) : filteredMedications.length === 0 ? (
+                <div className="text-xs text-gray-500">No matching medications.</div>
+              ) : filteredMedications.map((item) => (
                 <div
                   key={item.id}
                   className="p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer group"
-                  onClick={() => handleAddPreviousItem(item)}
+                  onClick={() => handleAddMedicationItem(item)}
                 >
                   <div className="flex items-start justify-between mb-2">
                     <div className="flex-1">
                       <div className="text-xs text-gray-900 mb-1">
                         {item.name}
                       </div>
-                      {item.specification && (
-                        <div className="text-[10px] text-gray-500 mb-1">
-                          {item.specification}
-                        </div>
-                      )}
+                      <div className="text-[10px] text-gray-500 mb-1">
+                        {item.strength
+                          ? `${item.strength}/${item.dosageForm || "-"}`
+                          : `${item.unit || "-"} - ${item.dosageForm || "-"}`}
+                      </div>
                       <div className="flex items-center gap-3">
                         <div className="text-[10px] text-gray-500">
-                          Last Order:{" "}
+                          Available Stock:{" "}
                           <span className="text-gray-900">
-                            {item.lastOrderQty} units
+                            {item.stockQuantity}
                           </span>
                         </div>
-                        <div
-                          className={`text-[10px] px-2 py-0.5 rounded ${
-                            item.frequency === "High"
-                              ? "bg-green-50 text-green-700"
-                              : item.frequency === "Medium"
-                                ? "bg-blue-50 text-blue-700"
-                                : "bg-gray-100 text-gray-600"
-                          }`}
-                        >
-                          {item.frequency} Frequency
+                        <div className="text-[10px] px-2 py-0.5 rounded bg-blue-50 text-blue-700">
+                          {item.genericName}
                         </div>
                       </div>
                     </div>
@@ -377,7 +355,7 @@ function DepartmentRequestCreatePage() {
                       type="button"
                       onClick={(event) => {
                         event.stopPropagation();
-                        handleAddPreviousItem(item);
+                        handleAddMedicationItem(item);
                       }}
                       className="text-gray-400 hover:text-green-600 transition-colors opacity-0 group-hover:opacity-100"
                     >
@@ -426,7 +404,7 @@ function DepartmentRequestCreatePage() {
                   No items added yet
                 </div>
                 <div className="text-[10px] text-gray-400">
-                  Add items using manual entry
+                  Add items from medication catalog or manual entry
                 </div>
               </div>
             ) : (
