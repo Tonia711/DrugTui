@@ -22,6 +22,11 @@ namespace UserAuthApi.Models
 
         public DateTime RequestedAt { get; set; } = DateTime.UtcNow;
 
+        [StringLength(120)]
+        public string? RejectedByUsername { get; set; }
+
+        public DateTime? RejectedAt { get; set; }
+
         [StringLength(500)]
         public string? Notes { get; set; }
 

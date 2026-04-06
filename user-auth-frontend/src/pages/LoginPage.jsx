@@ -32,7 +32,9 @@ function LoginPage() {
         const meRes = await api.get("/Users/me");
         const role = meRes.data?.role;
         const normalizedRole = role === "User" ? "DepartmentMember" : role;
-        navigate(normalizedRole === "DepartmentMember" ? "/inventory" : "/dashboard");
+        navigate(
+          normalizedRole === "DepartmentMember" ? "/inventory" : "/dashboard",
+        );
       } catch {
         navigate("/dashboard");
       }

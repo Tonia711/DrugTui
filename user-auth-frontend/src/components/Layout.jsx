@@ -100,7 +100,7 @@ function Layout() {
               <>
                 <NavLink to="/department-request/mine" className={navClass}>
                   <Boxes size={16} />
-                  <span className="text-xs">My Requests</span>
+                    <span className="text-xs">Department Request</span>
                 </NavLink>
               </>
             )}

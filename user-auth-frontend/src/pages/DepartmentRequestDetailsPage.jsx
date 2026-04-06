@@ -7,12 +7,16 @@ import {
   Check,
   Clock,
   PackageOpen,
+  RefreshCcw,
+  Trash2,
   User,
   Package,
   CheckCircle,
 } from "lucide-react";
 import useAxios from "../hooks/useAxios";
 import { departmentRequestApi } from "../util/api";
+
+const DRAFT_KEY = "departmentRequestDraft";
 
 const formatDate = (value) => {
   if (!value) return "-";
@@ -49,6 +53,7 @@ function DepartmentRequestDetailsPage() {
   const [isUpdating, setIsUpdating] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
+  const [acting, setActing] = useState(false);
 
   const navigate = useNavigate();
   const { requestId } = useParams();
@@ -57,7 +62,11 @@ function DepartmentRequestDetailsPage() {
     currentUser?.role === "User" ? "DepartmentMember" : currentUser?.role;
   const canReview =
     normalizedRole === "Admin" || normalizedRole === "WarehouseStaff";
-  const backPath = canReview ? "/department-request" : "/department-request/mine";
+  const isDepartmentMember =
+    normalizedRole === "DepartmentMember" || normalizedRole === "User";
+  const backPath = canReview
+    ? "/department-request"
+    : "/department-request/mine";
 
   const loadRequest = async () => {
     if (!requestId) {
@@ -176,6 +185,72 @@ function DepartmentRequestDetailsPage() {
       };
     });
   }, [request]);
+
+  const isOwnRejectedRequest =
+    Boolean(request) &&
+    isDepartmentMember &&
+    request.status === "Rejected" &&
+    request.requestedByUserId === currentUser?.id;
+
+  const handleResubmitOwnRequest = async () => {
+    if (!request || !isOwnRejectedRequest) return;
+
+    setError("");
+    setMessage("");
+    setActing(true);
+
+    try {
+      const draftItems = requestItems.map((item) => ({
+        id: `resubmit-${item.id || Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        name: item.name,
+        specification: item.specification || "",
+        quantityRequested: Math.max(1, Number(item.requestedQty) || 1),
+      }));
+
+      localStorage.setItem(
+        DRAFT_KEY,
+        JSON.stringify({
+          items: draftItems,
+          departmentId: request.departmentId ? String(request.departmentId) : "",
+          notes: request.notes || "",
+        }),
+      );
+
+      navigate("/department-request/new", {
+        state: {
+          message: "Rejected request loaded. Please review and submit again.",
+        },
+      });
+    } catch (err) {
+      setError(getErrorMessage(err, "Failed to prepare re-submit draft."));
+    } finally {
+      setActing(false);
+    }
+  };
+
+  const handleDeleteOwnRequest = async () => {
+    if (!request || !isOwnRejectedRequest) return;
+
+    if (!window.confirm("Delete this rejected request? This cannot be undone.")) {
+      return;
+    }
+
+    setError("");
+    setMessage("");
+    setActing(true);
+
+    try {
+      await departmentRequestApi.delete(request.requestNumber);
+      navigate("/department-request/mine", {
+        replace: true,
+        state: { message: "Rejected request deleted successfully." },
+      });
+    } catch (err) {
+      setError(getErrorMessage(err, "Failed to delete request."));
+    } finally {
+      setActing(false);
+    }
+  };
 
   const handleUpdateStatus = async (nextStatus) => {
     if (!request?.requestNumber || !canReview || isUpdating) return;
@@ -313,7 +388,7 @@ function DepartmentRequestDetailsPage() {
                   </span>
                 </div>
               </div>
-              {canReview && (
+              {canReview ? (
                 <div className="flex gap-2">
                   {request.status === "Pending Acceptance" && (
                     <>
@@ -363,7 +438,28 @@ function DepartmentRequestDetailsPage() {
                     </button>
                   )}
                 </div>
-              )}
+              ) : isOwnRejectedRequest ? (
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={handleResubmitOwnRequest}
+                    disabled={acting}
+                    className="px-4 py-2 border border-blue-300 text-blue-700 rounded-lg text-xs hover:bg-blue-50 transition-colors disabled:opacity-50 inline-flex items-center gap-2"
+                  >
+                    <RefreshCcw size={14} />
+                    Re-submit
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleDeleteOwnRequest}
+                    disabled={acting}
+                    className="px-4 py-2 border border-red-300 text-red-700 rounded-lg text-xs hover:bg-red-50 transition-colors disabled:opacity-50 inline-flex items-center gap-2"
+                  >
+                    <Trash2 size={14} />
+                    Delete
+                  </button>
+                </div>
+              ) : null}
             </div>
 
             <div className="grid grid-cols-4 gap-4">
@@ -404,6 +500,23 @@ function DepartmentRequestDetailsPage() {
                 </div>
               </div>
             </div>
+
+            {request.status === "Rejected" && (
+              <div className="mt-4 pt-4 border-t border-gray-200 grid grid-cols-4 gap-4">
+                <div>
+                  <div className="text-xs text-gray-500 mb-1">Rejected By</div>
+                  <div className="text-xs text-gray-900">
+                    {request.rejectedByUsername || "-"}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-xs text-gray-500 mb-1">Rejected At</div>
+                  <div className="text-xs text-gray-900">
+                    {request.rejectedAt ? formatDateTime(request.rejectedAt) : "-"}
+                  </div>
+                </div>
+              </div>
+            )}
 
             {request.notes && (
               <div className="mt-4 pt-4 border-t border-gray-200 text-xs text-gray-700">
