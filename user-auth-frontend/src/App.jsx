@@ -117,7 +117,12 @@ function App() {
           path="department-request/:requestId"
           element={
             <RoleProtectedRoute
-              allowedRoles={["Admin", "WarehouseStaff", "DepartmentMember", "User"]}
+              allowedRoles={[
+                "Admin",
+                "WarehouseStaff",
+                "DepartmentMember",
+                "User",
+              ]}
             >
               <DepartmentRequestDetailsPage />
             </RoleProtectedRoute>

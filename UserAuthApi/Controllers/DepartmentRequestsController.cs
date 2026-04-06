@@ -41,6 +41,8 @@ namespace UserAuthApi.Controllers
                     dr.Id,
                     dr.RequestNumber,
                     dr.Status,
+                    dr.RejectedByUsername,
+                    dr.RejectedAt,
                     dr.DepartmentId,
                     DepartmentName = dr.Department.Name,
                     dr.RequestedByUserId,
@@ -188,6 +190,8 @@ namespace UserAuthApi.Controllers
                     dr.Id,
                     dr.RequestNumber,
                     dr.Status,
+                    dr.RejectedByUsername,
+                    dr.RejectedAt,
                     dr.DepartmentId,
                     DepartmentName = dr.Department.Name,
                     dr.RequestedByUserId,
@@ -232,6 +236,8 @@ namespace UserAuthApi.Controllers
                     dr.Id,
                     dr.RequestNumber,
                     dr.Status,
+                    dr.RejectedByUsername,
+                    dr.RejectedAt,
                     dr.DepartmentId,
                     DepartmentName = dr.Department.Name,
                     dr.RequestedByUserId,
@@ -336,6 +342,18 @@ namespace UserAuthApi.Controllers
                 .Include(dr => dr.Items)
                 .FirstOrDefault(dr => dr.RequestNumber == normalizedRequestNumber);
 
+            var currentUserId = GetCurrentUserId();
+            if (!currentUserId.HasValue)
+            {
+                return Unauthorized("Invalid token.");
+            }
+
+            var currentUser = _context.Users.FirstOrDefault(u => u.Id == currentUserId.Value);
+            if (currentUser == null)
+            {
+                return Unauthorized("User not found.");
+            }
+
             if (request == null)
             {
                 return NotFound("Department request not found.");
@@ -364,6 +382,8 @@ namespace UserAuthApi.Controllers
 
             if (nextStatus.Equals("Rejected", StringComparison.OrdinalIgnoreCase))
             {
+                request.RejectedByUsername = currentUser.Username;
+                request.RejectedAt = DateTime.UtcNow;
                 foreach (var item in request.Items)
                 {
                     item.QuantityApproved = 0;

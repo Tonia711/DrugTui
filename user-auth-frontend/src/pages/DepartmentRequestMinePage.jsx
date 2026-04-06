@@ -2,15 +2,13 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
   ChevronDown,
-  Eye,
   PackageOpen,
   Plus,
-  RefreshCcw,
   Search,
-  Trash2,
 } from "lucide-react";
-import { departmentRequestApi } from "../util/api";
+import StatusBadge from "../components/StatusBadge";
 import useAxios from "../hooks/useAxios";
+import { departmentRequestApi } from "../util/api";
 
 const DRAFT_KEY = "departmentRequestDraft";
 
@@ -54,8 +52,8 @@ const getStatusClassName = (status) => {
 };
 
 function DepartmentRequestMinePage() {
-  const location = useLocation();
   const navigate = useNavigate();
+  const location = useLocation();
   const { data: currentUser } = useAxios({ method: "get", url: "/Users/me" });
 
   const [keyword, setKeyword] = useState("");
@@ -247,7 +245,7 @@ function DepartmentRequestMinePage() {
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-1.5 text-xs text-gray-500">
           <PackageOpen size={14} />
-          <span>Department Request / My Requests</span>
+          <span>Department Request</span>
         </div>
         <button
           type="button"
@@ -299,7 +297,7 @@ function DepartmentRequestMinePage() {
 
       <div className="bg-white border border-gray-200 rounded-lg">
         <div className="p-5 border-b border-gray-200">
-          <h2 className="text-sm text-gray-900 mb-3">My Request List</h2>
+          <h2 className="text-sm text-gray-900 mb-3">Department Request List</h2>
 
           <div className="flex items-center gap-3">
             <div className="flex-1 relative">
@@ -374,21 +372,20 @@ function DepartmentRequestMinePage() {
                 <th className="px-5 py-2.5 text-left text-xs text-gray-600">Description</th>
                 <th className="px-5 py-2.5 text-left text-xs text-gray-600">Requested By</th>
                 <th className="px-5 py-2.5 text-left text-xs text-gray-600">Time</th>
-                <th className="px-5 py-2.5 text-center text-xs text-gray-600">Status</th>
-                <th className="px-5 py-2.5 text-left text-xs text-gray-600">Actions</th>
+                <th className="px-5 py-2.5 text-center text-xs text-gray-600 w-52">Status</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
               {isLoading ? (
                 <tr>
-                  <td colSpan={7} className="px-5 py-6 text-xs text-gray-500">
+                  <td colSpan={6} className="px-5 py-6 text-xs text-gray-500">
                     Loading your requests...
                   </td>
                 </tr>
               ) : !filteredData.length ? (
                 <tr>
-                  <td colSpan={7} className="px-5 py-6 text-xs text-gray-500">
-                    No department requests found.
+                  <td colSpan={6} className="px-5 py-6 text-xs text-gray-500">
+                    No requests found.
                   </td>
                 </tr>
               ) : (
@@ -398,55 +395,24 @@ function DepartmentRequestMinePage() {
                   const isActing = actingId === row.id;
 
                   return (
-                    <tr key={row.id} className="hover:bg-gray-50">
+                    <tr
+                      key={row.id}
+                      className="hover:bg-gray-50 cursor-pointer"
+                      onClick={() => navigate(`/department-request/${row.id}`)}
+                    >
                       <td className="px-5 py-3 text-xs text-gray-900">{row.id}</td>
                       <td className="px-5 py-3 text-xs text-gray-900">{row.department}</td>
                       <td className="px-5 py-3 text-xs text-gray-900">{row.description}</td>
                       <td className="px-5 py-3 text-xs text-gray-900">{row.requestedBy}</td>
                       <td className="px-5 py-3 text-xs text-gray-900">{row.time}</td>
-                      <td className="px-5 py-3 text-center text-xs">
-                        <span
-                          className={`inline-flex items-center rounded-full px-2.5 py-1 ${getStatusClassName(
-                            row.status,
-                          )}`}
-                        >
-                          {row.status}
-                        </span>
-                      </td>
                       <td className="px-5 py-3 text-xs">
-                        <div className="flex items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() => navigate(`/department-request/${row.id}`)}
-                            className="inline-flex items-center gap-1 px-2 py-1 border border-gray-300 rounded hover:bg-gray-50"
-                          >
-                            <Eye size={12} />
-                            View
-                          </button>
-
-                          {isRejected && isOwnRequest && (
-                            <>
-                              <button
-                                type="button"
-                                onClick={() => handleResubmit(row.id)}
-                                disabled={isActing}
-                                className="inline-flex items-center gap-1 px-2 py-1 border border-blue-300 text-blue-700 rounded hover:bg-blue-50 disabled:opacity-50"
-                              >
-                                <RefreshCcw size={12} />
-                                Re-submit
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleDelete(row.id)}
-                                disabled={isActing}
-                                className="inline-flex items-center gap-1 px-2 py-1 border border-red-300 text-red-700 rounded hover:bg-red-50 disabled:opacity-50"
-                              >
-                                <Trash2 size={12} />
-                                Delete
-                              </button>
-                            </>
-                          )}
-                        </div>
+                        <StatusBadge
+                          label={row.status}
+                          toneClass={getStatusClassName(row.status)}
+                          widthClass="w-40"
+                          paddingClass="px-3 py-1"
+                          className="min-h-7 rounded-md"
+                        />
                       </td>
                     </tr>
                   );
