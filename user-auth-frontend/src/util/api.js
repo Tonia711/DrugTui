@@ -82,8 +82,14 @@ export const invoiceApi = {
       },
     }),
   getById: (invoiceId) => api.get(`/Invoices/${invoiceId}`),
+  create: (payload) => api.post("/Invoices", payload),
   updateStatus: (invoiceId, status) =>
     api.put(`/Invoices/${invoiceId}/status`, { status }),
+  extract: (file) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    return api.post("/Invoices/extract", formData);
+  },
 };
 
 export const departmentRequestApi = {

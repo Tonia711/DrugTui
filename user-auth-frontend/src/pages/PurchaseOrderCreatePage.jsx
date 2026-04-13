@@ -245,7 +245,11 @@ function PurchaseOrderCreatePage() {
   };
 
   const handleQuantityChange = (id, quantity) => {
-    const normalized = Math.max(1, Number(quantity) || 1);
+    const trimmed = String(quantity ?? "").trim();
+    const normalized =
+      trimmed === ""
+        ? ""
+        : Math.max(1, Number.parseInt(trimmed, 10) || 1);
     setPurchaseList((prev) =>
       prev.map((item) =>
         item.id === id ? { ...item, quantity: normalized } : item,
@@ -477,7 +481,7 @@ function PurchaseOrderCreatePage() {
                       <input
                         type="number"
                         min="1"
-                        value={item.quantity}
+                        value={item.quantity ?? ""}
                         onChange={(event) =>
                           handleQuantityChange(item.id, event.target.value)
                         }
