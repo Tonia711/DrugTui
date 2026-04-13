@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ChevronDown, FileText, Search, Upload, X } from "lucide-react";
-import { invoiceApi } from "../util/api";
+import { invoiceApi, purchaseOrderApi, supplierApi } from "../util/api";
 import StatusBadge from "../components/StatusBadge";
 
 const formatDate = (value) => {
@@ -43,7 +43,46 @@ function InvoicePage() {
   const [showStatusDropdown, setShowStatusDropdown] = useState(false);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
+  const [isExtracting, setIsExtracting] = useState(false);
+  const [extractedInvoice, setExtractedInvoice] = useState(null);
+  const [uploadError, setUploadError] = useState("");
+  const [isSavingExtracted, setIsSavingExtracted] = useState(false);
+  const [suppliers, setSuppliers] = useState([]);
+  const [purchaseOrders, setPurchaseOrders] = useState([]);
+  const [isLoadingReferences, setIsLoadingReferences] = useState(false);
+  const [draftInvoice, setDraftInvoice] = useState({
+    invoiceNumber: "",
+    supplierId: "",
+    purchaseOrderId: "",
+    totalAmount: "",
+    notes: "",
+  });
   const statusDropdownRef = useRef(null);
+
+  const normalizeText = (value) => (value || "").trim().toLowerCase();
+
+  const buildDraftFromExtracted = (extracted, supplierList, orderList) => {
+    const matchedSupplier = supplierList.find(
+      (supplier) =>
+        normalizeText(supplier.name) === normalizeText(extracted?.supplierName),
+    );
+    const matchedOrder = orderList.find(
+      (order) =>
+        normalizeText(order.orderNumber) ===
+        normalizeText(extracted?.purchaseOrderNumber),
+    );
+
+    return {
+      invoiceNumber: extracted?.invoiceNumber || "",
+      supplierId: matchedSupplier ? String(matchedSupplier.id) : "",
+      purchaseOrderId: matchedOrder ? String(matchedOrder.id) : "",
+      totalAmount:
+        typeof extracted?.totalAmount === "number"
+          ? String(extracted.totalAmount)
+          : "",
+      notes: "",
+    };
+  };
 
   useEffect(() => {
     const handleOutsideClick = (event) => {
@@ -79,6 +118,31 @@ function InvoicePage() {
 
     loadInvoices();
   }, []);
+
+  useEffect(() => {
+    const loadReferences = async () => {
+      if (!showUploadModal) {
+        return;
+      }
+
+      setIsLoadingReferences(true);
+      try {
+        const [supplierRes, orderRes] = await Promise.all([
+          supplierApi.getAll(),
+          purchaseOrderApi.getAll(),
+        ]);
+
+        setSuppliers(supplierRes.data || []);
+        setPurchaseOrders(orderRes.data || []);
+      } catch {
+        setUploadError("Failed to load suppliers and purchase orders.");
+      } finally {
+        setIsLoadingReferences(false);
+      }
+    };
+
+    loadReferences();
+  }, [showUploadModal]);
 
   const stats = useMemo(() => {
     const byStatus = (status) => {
@@ -153,12 +217,112 @@ function InvoicePage() {
   const handleFileSelect = (event) => {
     const file = event.target.files?.[0] || null;
     setSelectedFile(file);
+    setExtractedInvoice(null);
+    setUploadError("");
+    setDraftInvoice({
+      invoiceNumber: "",
+      supplierId: "",
+      purchaseOrderId: "",
+      totalAmount: "",
+      notes: "",
+    });
   };
 
-  const handleUpload = () => {
-    if (!selectedFile) return;
+  const handleUpload = async () => {
+    if (!selectedFile || isExtracting) return;
+
+    setIsExtracting(true);
+    setUploadError("");
+    setExtractedInvoice(null);
+
+    try {
+      const res = await invoiceApi.extract(selectedFile);
+      const extracted = res.data || null;
+      setExtractedInvoice(extracted);
+
+      if (extracted) {
+        setDraftInvoice(buildDraftFromExtracted(extracted, suppliers, purchaseOrders));
+      }
+    } catch (err) {
+      const message =
+        typeof err?.response?.data === "string"
+          ? err.response.data
+          : "Failed to extract invoice content.";
+      setUploadError(message);
+    } finally {
+      setIsExtracting(false);
+    }
+  };
+
+  const handleDraftChange = (field, value) => {
+    setDraftInvoice((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleSaveCorrectedInvoice = async () => {
+    if (isSavingExtracted) return;
+
+    const invoiceNumber = draftInvoice.invoiceNumber.trim();
+    if (!invoiceNumber) {
+      setUploadError("Invoice number is required.");
+      return;
+    }
+
+    if (!draftInvoice.supplierId) {
+      setUploadError("Please select a supplier.");
+      return;
+    }
+
+    if (!draftInvoice.purchaseOrderId) {
+      setUploadError("Please select a purchase order.");
+      return;
+    }
+
+    const parsedAmount = Number(draftInvoice.totalAmount || "0");
+    if (Number.isNaN(parsedAmount) || parsedAmount < 0) {
+      setUploadError("Total amount must be a valid non-negative number.");
+      return;
+    }
+
+    setIsSavingExtracted(true);
+    setUploadError("");
+
+    try {
+      await invoiceApi.create({
+        invoiceNumber,
+        supplierId: Number(draftInvoice.supplierId),
+        purchaseOrderId: Number(draftInvoice.purchaseOrderId),
+        totalAmount: parsedAmount,
+        invoiceDate: new Date().toISOString(),
+        notes: draftInvoice.notes?.trim() || null,
+        items: [],
+      });
+
+      const refreshed = await invoiceApi.getAll();
+      setInvoices(refreshed.data || []);
+      handleCloseUploadModal();
+    } catch (err) {
+      const message =
+        typeof err?.response?.data === "string"
+          ? err.response.data
+          : "Failed to save corrected invoice.";
+      setUploadError(message);
+    } finally {
+      setIsSavingExtracted(false);
+    }
+  };
+
+  const handleCloseUploadModal = () => {
     setShowUploadModal(false);
     setSelectedFile(null);
+    setExtractedInvoice(null);
+    setUploadError("");
+    setDraftInvoice({
+      invoiceNumber: "",
+      supplierId: "",
+      purchaseOrderId: "",
+      totalAmount: "",
+      notes: "",
+    });
   };
 
   return (
@@ -420,10 +584,7 @@ function InvoicePage() {
             <div className="flex items-center justify-between mb-5">
               <h2 className="text-sm text-gray-900">Upload Invoice</h2>
               <button
-                onClick={() => {
-                  setShowUploadModal(false);
-                  setSelectedFile(null);
-                }}
+                onClick={handleCloseUploadModal}
                 className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
               >
                 <X size={16} />
@@ -435,6 +596,12 @@ function InvoicePage() {
                 Select an invoice file to upload. Supported formats: PDF, JPG,
                 PNG
               </p>
+
+              {uploadError && (
+                <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+                  {uploadError}
+                </div>
+              )}
 
               {/* File Input */}
               <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-blue-400 transition-colors">
@@ -462,26 +629,162 @@ function InvoicePage() {
               {/* Upload Button */}
               <div className="flex gap-2">
                 <button
-                  onClick={() => {
-                    setShowUploadModal(false);
-                    setSelectedFile(null);
-                  }}
+                  onClick={handleCloseUploadModal}
                   className="flex-1 px-4 py-2 text-xs bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleUpload}
-                  disabled={!selectedFile}
+                  disabled={!selectedFile || isExtracting}
                   className={`flex-1 px-4 py-2 text-xs rounded-lg transition-colors ${
-                    selectedFile
+                    selectedFile && !isExtracting
                       ? "bg-blue-600 text-white hover:bg-blue-700"
                       : "bg-gray-300 text-gray-500 cursor-not-allowed"
                   }`}
                 >
-                  Upload & Check
+                  {isExtracting ? "Extracting..." : "Upload & Check"}
                 </button>
               </div>
+
+              {extractedInvoice && (
+                <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-xs font-semibold text-gray-900">
+                      Recognized Result
+                    </h3>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] px-2 py-0.5 rounded bg-blue-50 text-blue-700">
+                        {extractedInvoice.confidence || "low"}
+                      </span>
+                      {extractedInvoice.ocrUsed && (
+                        <span className="text-[10px] px-2 py-0.5 rounded bg-purple-50 text-purple-700">
+                          OCR
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {isLoadingReferences && (
+                    <div className="text-xs text-gray-500">
+                      Loading supplier and purchase order options...
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-2 gap-3 text-xs">
+                    <div>
+                      <label className="text-gray-500">Invoice Number</label>
+                      <input
+                        type="text"
+                        className="mt-1 w-full rounded border border-gray-300 bg-white px-2 py-1 text-xs text-gray-900"
+                        value={draftInvoice.invoiceNumber}
+                        onChange={(event) =>
+                          handleDraftChange("invoiceNumber", event.target.value)
+                        }
+                      />
+                    </div>
+                    <div>
+                      <label className="text-gray-500">Supplier</label>
+                      <select
+                        className="mt-1 w-full rounded border border-gray-300 bg-white px-2 py-1 text-xs text-gray-900"
+                        value={draftInvoice.supplierId}
+                        onChange={(event) =>
+                          handleDraftChange("supplierId", event.target.value)
+                        }
+                      >
+                        <option value="">Select supplier</option>
+                        {suppliers.map((supplier) => (
+                          <option key={supplier.id} value={supplier.id}>
+                            {supplier.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-gray-500">PO Number</label>
+                      <select
+                        className="mt-1 w-full rounded border border-gray-300 bg-white px-2 py-1 text-xs text-gray-900"
+                        value={draftInvoice.purchaseOrderId}
+                        onChange={(event) =>
+                          handleDraftChange("purchaseOrderId", event.target.value)
+                        }
+                      >
+                        <option value="">Select purchase order</option>
+                        {purchaseOrders.map((order) => (
+                          <option key={order.id} value={order.id}>
+                            {order.orderNumber}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-gray-500">Total Amount</label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        className="mt-1 w-full rounded border border-gray-300 bg-white px-2 py-1 text-xs text-gray-900"
+                        value={draftInvoice.totalAmount}
+                        onChange={(event) =>
+                          handleDraftChange("totalAmount", event.target.value)
+                        }
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-xs text-gray-500">Notes (optional)</label>
+                    <textarea
+                      className="mt-1 w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-xs text-gray-900"
+                      rows={2}
+                      value={draftInvoice.notes}
+                      onChange={(event) =>
+                        handleDraftChange("notes", event.target.value)
+                      }
+                    />
+                  </div>
+
+                  <div>
+                    <div className="text-xs text-gray-500 mb-1">Serial Numbers</div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {(extractedInvoice.serialNumbers || []).length > 0 ? (
+                        extractedInvoice.serialNumbers.map((sn) => (
+                          <span
+                            key={sn}
+                            className="px-2 py-0.5 rounded bg-white border border-gray-200 text-[10px] text-gray-700"
+                          >
+                            {sn}
+                          </span>
+                        ))
+                      ) : (
+                        <span className="text-[10px] text-gray-500">No serial numbers recognized.</span>
+                      )}
+                    </div>
+                  </div>
+
+                  {extractedInvoice.pdfText && (
+                    <details className="text-xs">
+                      <summary className="cursor-pointer text-gray-600">Show extracted text</summary>
+                      <pre className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap rounded border border-gray-200 bg-white p-3 text-[10px] text-gray-700">
+                        {extractedInvoice.pdfText}
+                      </pre>
+                    </details>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={handleSaveCorrectedInvoice}
+                    disabled={isSavingExtracted}
+                    className={`w-full px-4 py-2 text-xs rounded-lg transition-colors ${
+                      isSavingExtracted
+                        ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                        : "bg-green-600 text-white hover:bg-green-700"
+                    }`}
+                  >
+                    {isSavingExtracted ? "Saving..." : "Save Corrected Invoice"}
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>
